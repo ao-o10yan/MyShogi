@@ -38,11 +38,19 @@ namespace MyShogi.Model.Dependency
             // MacOSではsysctlを呼び出して物理コア数が取得できる模様。
             // Linuxは未確認。
 
+#if MACOS
+			string filename = "sysctl";
+			string arguments = "hw.activecpu";
+#elif LINUX
+			string filename = "nproc";
+			string arguments = "--all";
+#endif
+
             var info = new System.Diagnostics.ProcessStartInfo
             {
-                FileName = "sysctl",
+                FileName = filename,
                 // WorkingDirectory = engineData.ExeWorkingDirectory,
-                Arguments = "hw.activecpu",
+                Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -59,13 +67,15 @@ namespace MyShogi.Model.Dependency
 
             var result = process.StandardOutput.ReadToEnd();
             result = result.Trim();
+#if MACOS
             result = result.Substring(14);
+#endif
 
             int processor_cores;
             var success = Int32.TryParse(result, out processor_cores);
             if (!success)
                 processor_cores = 1;
-
+			Console.WriteLine("success = {0}, processor_cores = {1}", success, processor_cores);
             return processor_cores;
         }
 
@@ -75,10 +85,17 @@ namespace MyShogi.Model.Dependency
         /// <returns></returns>
         public static CpuType GetCurrentCpu()
         {
+#if MACOS
+			string filename = "sysctl";
+			string arguments = "machdep.cpu.features";
+#elif LINUX
+			string filename = "grep";
+			string arguments = "flags /proc/cpuinfo";
+#endif
             var info = new ProcessStartInfo
             {
-                FileName = "sysctl",
-                Arguments = "machdep.cpu.features",
+                FileName = filename,
+                Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -95,30 +112,42 @@ namespace MyShogi.Model.Dependency
 
             string result = process.StandardOutput.ReadToEnd();
             result = result.Trim();
+#if MACOS
             result = result.Substring(22);
+#endif
 
             CpuType c;
-            if (result.Contains("AVX512"))
-                c = CpuType.AVX512;
+            //実際はCpuTypes.csで先に32bitを弾いているので関係ない
+            if (!Environment.Is64BitOperatingSystem)
+				if (result.Contains("SSE2") || result.Contains("sse2"))
+					c = CpuType.SSE2;
 
-            else if (result.Contains("AVX2"))
-                c = CpuType.AVX2;
+				else
+					c = CpuType.NO_SSE;
 
-            else if (result.Contains("AVX1"))
-                c = CpuType.AVX;
+			else
+				if (result.Contains("AVX512") || result.Contains("avx512"))
+					c = CpuType.AVX512;
 
-            else if (result.Contains("SSE4.2"))
-                c = CpuType.SSE42;
+				else if (result.Contains("AVX2") || result.Contains("avx2"))
+					c = CpuType.AVX2;
 
-            else if (result.Contains("SSE4.1"))
-                c = CpuType.SSE41;
+				else if (result.Contains("AVX1") || result.Contains("avx1"))
+					c = CpuType.AVX;
 
-            else if (result.Contains("SSE2"))
-                c = CpuType.SSE2;
+				else if (result.Contains("SSE4.2") || result.Contains("sse4_2"))
+					c = CpuType.SSE42;
 
-            else
-                c = CpuType.NO_SSE;
+				else if (result.Contains("SSE4.1") || result.Contains("sse4_1"))
+					c = CpuType.SSE41;
 
+				else if (result.Contains("SSE2") || result.Contains("sse2"))
+					c = CpuType.SSE2;
+
+				else
+					c = CpuType.NO_SSE;
+
+			Console.WriteLine("c = CpuType.{0}", c);
             return c;
         }
 
@@ -128,10 +157,17 @@ namespace MyShogi.Model.Dependency
         /// <returns></returns>
         public static ulong GetFreePhysicalMemory()
         {
+#if MACOS
+			string filename = "vm_stat";
+			string arguments = "";
+#elif LINUX
+			string filename = "vmstat";
+			string arguments = "-s";
+#endif
             var info = new ProcessStartInfo
             {
-                FileName = "vm_stat",
-                Arguments = "",
+                FileName = filename,
+                Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -154,18 +190,37 @@ namespace MyShogi.Model.Dependency
             for(int i = 1; i < rows.Length; i++)
             {
                 string row = rows[i];
+#if MACOS
                 string[] data = row.Split(':');
+#elif LINUX
+                string[] data = row.Split('K');
+#endif
                 if (data.Length != 2) continue;
 
+#if MACOS
                 string key = data[0].Trim();
                 string value = data[1].Trim();
+                string key0 = "Pages free";
+                string key1 = "Pages purgeable";
+                string key2 = "File-backed pages";
+#elif LINUX
+                string key = data[1].Trim();
+                string value = data[0].Trim();
+                string key0 = "inactive memory";
+                string key1 = "free memory";
+                string key2 = "buffer memory";
+#endif
                 // 空きメモリとカーネルが持っているキャッシュを合計する(必要になったら開放できるもの)
-                if (key == "Pages free" || key == "Pages purgeable" || key == "File-backed pages")
+                if (key == key0 || key == key1 || key == key2)
                 {
+#if MACOS
                     freeMemory += ulong.Parse(value.Replace(".", "")) * 4096ul;
+#elif LINUX
+                    freeMemory += ulong.Parse(value);
+#endif
                 }
             }
-
+			Console.WriteLine("freeMemory = {0}Kb", freeMemory);
             return freeMemory / 1024ul;
         }
     }
@@ -309,7 +364,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// メインウインドウのToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string MainToolStrip = DefaultFont3;
 
@@ -325,7 +380,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// ミニ盤面下のToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string SubToolStrip = DefaultFont3;
 
