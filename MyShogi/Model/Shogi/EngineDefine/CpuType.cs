@@ -61,8 +61,8 @@ namespace MyShogi.Model.Shogi.EngineDefine
                 return c;
 
             // 64bit環境でなければ無条件でNO_SSEとして扱う
-            if (!Environment.Is64BitOperatingSystem)
-                c = CpuType.NO_SSE;
+            //if (!Environment.Is64BitOperatingSystem)
+            //    c = CpuType.NO_SSE;
             else
                 // 64bit環境である。
                 // 思考エンジンは別プロセスで動作させるので、このプロセスが32bitであっても問題ない。

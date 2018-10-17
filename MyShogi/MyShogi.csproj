@@ -281,7 +281,7 @@
     <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.designer.cs">
+    <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.Designer.cs">
       <DependentUpon>EngineConsiderationMainControl.cs</DependentUpon>
     </Compile>
     <Compile Include="View\Win2D\Info\MessageDialog.cs">
