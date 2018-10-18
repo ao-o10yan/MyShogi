@@ -220,7 +220,7 @@ namespace MyShogi.Model.Dependency
 #endif
                 }
             }
-			Console.WriteLine("freeMemory = {0}Kb", freeMemory);
+			Console.WriteLine("freeMemory = {0}b", freeMemory);
             return freeMemory / 1024ul;
         }
     }
