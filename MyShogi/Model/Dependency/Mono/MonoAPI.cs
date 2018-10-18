@@ -216,7 +216,7 @@ namespace MyShogi.Model.Dependency
 #if MACOS
                     freeMemory += ulong.Parse(value.Replace(".", "")) * 4096ul;
 #elif LINUX
-                    freeMemory += ulong.Parse(value);
+                    freeMemory += ulong.Parse(value) * 1024ul;
 #endif
                 }
             }
