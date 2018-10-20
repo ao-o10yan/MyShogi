@@ -18,6 +18,8 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using MyShogi.Model.Common.String;
+using MyShogi.Model.Common.Tool;
 
 // --- 単体で呼び出して使うAPI群
 
@@ -36,21 +38,20 @@ namespace MyShogi.Model.Dependency
         public static int GetProcessorCores()
         {
             // MacOSではsysctlを呼び出して物理コア数が取得できる模様。
-            // Linuxは未確認。
+            // Linuxでは、nprocを用いるる
 
 #if MACOS
-			string filename = "sysctl";
-			string arguments = "hw.activecpu";
+            var FileName = "sysctl";
+            var Arguments = "hw.activecpu";
 #elif LINUX
-			string filename = "nproc";
-			string arguments = "--all";
+            var FileName = "nproc";
+            var Arguments = "--all";
 #endif
 
-            var info = new System.Diagnostics.ProcessStartInfo
+            var info = new ProcessStartInfo
             {
-                FileName = filename,
-                // WorkingDirectory = engineData.ExeWorkingDirectory,
-                Arguments = arguments,
+                FileName = FileName,
+                Arguments = Arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -68,13 +69,18 @@ namespace MyShogi.Model.Dependency
             var result = process.StandardOutput.ReadToEnd();
             result = result.Trim();
 #if MACOS
+            // Linuxだとこれ不要
             result = result.Substring(14);
 #endif
 
             int processor_cores;
-            var success = Int32.TryParse(result, out processor_cores);
+            var success = int.TryParse(result, out processor_cores);
             if (!success)
+            {
+                // 失敗したのでログ上に出力しておく。
+                Log.Write(LogInfoType.SystemError, $"GetProcessorCores() , success = {success} , processor_cores = {processor_cores}");
                 processor_cores = 1;
+            }
 			Console.WriteLine("success = {0}, processor_cores = {1}", success, processor_cores);
             return processor_cores;
         }
@@ -86,16 +92,17 @@ namespace MyShogi.Model.Dependency
         public static CpuType GetCurrentCpu()
         {
 #if MACOS
-			string filename = "sysctl";
-			string arguments = "machdep.cpu.features";
+            var FileName = "sysctl";
+            var Arguments = "machdep.cpu.features";
 #elif LINUX
-			string filename = "grep";
-			string arguments = "flags /proc/cpuinfo";
+            var FileName = "grep";
+            var Arguments = "flags /proc/cpuinfo";
 #endif
+
             var info = new ProcessStartInfo
             {
-                FileName = filename,
-                Arguments = arguments,
+                FileName = FileName,
+                Arguments = Arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -103,52 +110,45 @@ namespace MyShogi.Model.Dependency
                 RedirectStandardError = false,
             };
 
-            var process = new Process
+            using (var process = new Process { StartInfo = info })
             {
-                StartInfo = info,
-            };
+                process.Start();
 
-            process.Start();
-
-            string result = process.StandardOutput.ReadToEnd();
-            result = result.Trim();
+                var result = process.StandardOutput.ReadToEnd();
+                result = result.Trim();
 #if MACOS
             result = result.Substring(22);
+#elif LINUX
+                // Linuxだともう少し長い文字列であり、小文字が混じる可能性がある。
+                result = result.ToUpper();
 #endif
 
-            CpuType c;
-            //実際はCpuTypes.csで先に32bitを弾いているので関係ない
-            if (!Environment.Is64BitOperatingSystem)
-				if (result.Contains("SSE2") || result.Contains("sse2"))
-					c = CpuType.SSE2;
+                CpuType c;
+                if (result.Contains("AVX512"))
+                    c = CpuType.AVX512;
 
-				else
-					c = CpuType.NO_SSE;
+                else if (result.Contains("AVX2"))
+                    c = CpuType.AVX2;
 
-			else
-				if (result.Contains("AVX512") || result.Contains("avx512"))
-					c = CpuType.AVX512;
+                else if (result.Contains("AVX1"))
+                    c = CpuType.AVX;
 
-				else if (result.Contains("AVX2") || result.Contains("avx2"))
-					c = CpuType.AVX2;
+                else if (result.Contains("SSE4.2") /* macOS */ || result.Contains("SSE4_2") /* Linux */)
+                    c = CpuType.SSE42;
 
-				else if (result.Contains("AVX1") || result.Contains("avx1"))
-					c = CpuType.AVX;
+                else if (result.Contains("SSE4.1") /* macOS */ || result.Contains("SSE4_1") /* Linux */)
+                    c = CpuType.SSE41;
 
-				else if (result.Contains("SSE4.2") || result.Contains("sse4_2"))
-					c = CpuType.SSE42;
+                else if (result.Contains("SSE2"))
+                    c = CpuType.SSE2;
 
-				else if (result.Contains("SSE4.1") || result.Contains("sse4_1"))
-					c = CpuType.SSE41;
+                else
+                    c = CpuType.NO_SSE;
 
-				else if (result.Contains("SSE2") || result.Contains("sse2"))
-					c = CpuType.SSE2;
-
-				else
-					c = CpuType.NO_SSE;
-
-			Console.WriteLine("c = CpuType.{0}", c);
-            return c;
+                process.WaitForExit();
+				Console.WriteLine("c = CpuType.{0}", c);
+                return c;
+            }
         }
 
         /// <summary>
@@ -157,17 +157,19 @@ namespace MyShogi.Model.Dependency
         /// <returns></returns>
         public static ulong GetFreePhysicalMemory()
         {
+
 #if MACOS
-			string filename = "vm_stat";
-			string arguments = "";
+			var FileName = "vm_stat";
+			var Arguments = "";
 #elif LINUX
-			string filename = "vmstat";
-			string arguments = "-s";
+            var FileName = "vmstat";
+            var Arguments = "-s";
 #endif
+
             var info = new ProcessStartInfo
             {
-                FileName = filename,
-                Arguments = arguments,
+                FileName = FileName,
+                Arguments = Arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardInput = false,
@@ -175,53 +177,51 @@ namespace MyShogi.Model.Dependency
                 RedirectStandardError = false,
             };
 
-            var process = new Process
+            using (var process = new Process { StartInfo = info })
             {
-                StartInfo = info,
-            };
+                process.Start();
 
-            process.Start();
+                var result = process.StandardOutput.ReadToEnd();
+                var rows = result.Split('\n');
 
-            string result = process.StandardOutput.ReadToEnd();
-            string[] rows = result.Split('\n');
+                ulong freeMemory = 0;
+                // 始めの行はタイトルなので飛ばす
+                for (int i = 1; i < rows.Length; i++)
+                {
+                    var row = rows[i];
 
-            ulong freeMemory = 0;
-            // 始めの行はタイトルなので飛ばす
-            for(int i = 1; i < rows.Length; i++)
-            {
-                string row = rows[i];
 #if MACOS
-                string[] data = row.Split(':');
-#elif LINUX
-                string[] data = row.Split('K');
-#endif
+                var data = row.Split(':');
                 if (data.Length != 2) continue;
 
-#if MACOS
-                string key = data[0].Trim();
-                string value = data[1].Trim();
-                string key0 = "Pages free";
-                string key1 = "Pages purgeable";
-                string key2 = "File-backed pages";
-#elif LINUX
-                string key = data[1].Trim();
-                string value = data[0].Trim();
-                string key0 = "inactive memory";
-                string key1 = "free memory";
-                string key2 = "buffer memory";
-#endif
+                var key = data[0].Trim();
+                var value = data[1].Trim();
                 // 空きメモリとカーネルが持っているキャッシュを合計する(必要になったら開放できるもの)
-                if (key == key0 || key == key1 || key == key2)
+                if (key == "Pages free" || key == "Pages purgeable" || key == "File-backed pages")
                 {
-#if MACOS
-                    freeMemory += ulong.Parse(value.Replace(".", "")) * 4096ul;
+                    // 1 page = 4[kB]なので、4をかけて[kB]単位に変換する。
+                    freeMemory += ulong.Parse(value.Replace(".", "")) * 4ul;
+                }
 #elif LINUX
-                    freeMemory += ulong.Parse(value) * 1024ul;
+                    var data = row.Split('K');
+                    if (data.Length != 2) continue;
+
+                    var key = data[1].Trim();
+                    var value = data[0].Trim();
+
+                    // 空きメモリとカーネルが持っているキャッシュを合計する(必要になったら開放できるもの)
+                    if (key == "inactive memory" || key == "free memory" || key == "buffer memory")
+                    {
+                        //  CentOSなど、"95724 K free memory"のように返ってくる。
+                        // この"K"でSplitして、左側の数字。単位は、kB単位なので単位の変換不要。
+                        freeMemory += ulong.Parse(value.Replace(".", ""));
+                    }
 #endif
                 }
+                process.WaitForExit();
+				Console.WriteLine("freeMemory = {0}b", freeMemory);
+                return freeMemory;
             }
-			Console.WriteLine("freeMemory = {0}b", freeMemory);
-            return freeMemory / 1024ul;
         }
     }
 
@@ -364,7 +364,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// メインウインドウのToolStrip(ボタン)のフォント
-        /// ここ、? ? が大きく表示されるフォントでないとつらい。
+        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string MainToolStrip = DefaultFont3;
 
@@ -380,7 +380,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// ミニ盤面下のToolStrip(ボタン)のフォント
-        /// ここ、? ? が大きく表示されるフォントでないとつらい。
+        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string SubToolStrip = DefaultFont3;
 
@@ -426,6 +426,7 @@ namespace MyShogi.Model.Resource.Sounds
                 {
                     // ファイルが存在しないときはreturnするが、このとき、
                     // 参照カウント自体は非0でかつ、_playerProcess == null
+#if MACOS
                     var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
                     if (!File.Exists(playerExePath))
                         return;
@@ -433,14 +434,12 @@ namespace MyShogi.Model.Resource.Sounds
                     var info = new ProcessStartInfo
                     {
                         FileName = "mono",
-                        Arguments = playerExePath + " " + Directory.GetCurrentDirectory() ,
-                        // →　ここ、playerExePathにスペースが混じっているとスペースでsplitするなら、まずいような？
-                        //Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
+                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
 
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         RedirectStandardInput = true,
-                        RedirectStandardOutput = false,
+                        RedirectStandardOutput = true,
                         RedirectStandardError = false,
                     };
 
@@ -451,6 +450,11 @@ namespace MyShogi.Model.Resource.Sounds
 
                     process.Start();
                     _playerProcess = process;
+#elif LINUX
+                    var playerExePath = "/usr/bin/aplay";
+                    if (!File.Exists(playerExePath))
+                        return;
+#endif
                 }
 
             }
@@ -477,11 +481,7 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
-                // ここでリソースを解放するコマンドを送るべきだが、
-                // とりま、終了まで解放せずにサウンドを使うので解放しないことにする。
-
-                // _playerProcess?.StandardInput.WriteLine($"release {filename}");
-
+                _playerProcess?.StandardInput.WriteLine($"release {filename}");
             }
         }
 
@@ -492,16 +492,34 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
+#if MACOS
                 if (_playerProcess == null || _playerProcess.HasExited)
                     return;
+#elif LINUX
+				//Console.WriteLine("wav = {0}", filename);
+				var info = new ProcessStartInfo
+				{
+					FileName = "aplay",
+					Arguments = filename,
 
-                _playerProcess.StandardInput.WriteLine(filename);
+					CreateNoWindow = true,
+					UseShellExecute = false,
+					RedirectStandardInput = true,
+					RedirectStandardOutput = true,
+					RedirectStandardError = false,
+				};
 
-                // →　ここで通しナンバーを生成して渡したほうがいいような…。
-                /*
+				var process = new Process
+				{
+					StartInfo = info,
+				};
+
+				process.Start();
+                _playerProcess = process;
+#endif
+
                 play_id = play_id_count++;
                 _playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
-                */
             }
         }
 
@@ -511,17 +529,16 @@ namespace MyShogi.Model.Resource.Sounds
         /// <returns></returns>
         public bool IsPlaying()
         {
-            // 再生中かどうか知るすべが(今のところ)ないのでとりあえずfalseで…
-            return false;
+            if (_playerProcess == null || _playerProcess.HasExited)
+                return false;
 
-            // →　再生するときに再生用に通しナンバーを渡して、そのナンバーのサウンドが再生中であるか問い合わせるべきのような。
-            // この呼び出しスレッドはサウンド用のWorker Threadなので、ここで問い合わせに多少時間がかかっても許されるので。
-
-            /*
             _playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
             var result = _playerProcess.StandardOutput.ReadLine();
-            …
-            */
+            if (String.IsNullOrWhiteSpace(result))
+                return false;
+
+            result = result.Trim();
+            return result == "yes";
         }
 
         public void Dispose()
