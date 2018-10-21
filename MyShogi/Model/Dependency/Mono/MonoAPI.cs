@@ -496,7 +496,11 @@ namespace MyShogi.Model.Resource.Sounds
                 if (_playerProcess == null || _playerProcess.HasExited)
                     return;
 #elif LINUX
-				//Console.WriteLine("wav = {0}", filename);
+				var playerExePath = "/usr/bin/aplay";
+				if (!File.Exists(playerExePath))
+					return;
+
+				Console.WriteLine("wav = {0}", filename);
 				var info = new ProcessStartInfo
 				{
 					FileName = "aplay",
