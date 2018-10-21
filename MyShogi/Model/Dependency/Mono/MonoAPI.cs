@@ -255,6 +255,22 @@ namespace MyShogi.Model.Dependency
             }
 #elif LINUX
             // Linux用、あとで実装する。
+			if (!File.Exists("/usr/bin/xclip"))
+				return;
+
+            using (var p = new Process())
+            {
+                p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = false,
+                    RedirectStandardInput = true,
+                };
+                p.Start();
+                p.StandardInput.Write(text);
+                p.StandardInput.Close();
+                p.WaitForExit();
+            }
 #endif
         }
 
@@ -277,7 +293,24 @@ namespace MyShogi.Model.Dependency
             }
 #elif LINUX
             // Linux用、あとで実装する。
-            pasteText = null;
+			if (!File.Exists("/usr/bin/xclip"))
+			{
+				pasteText = null;
+			}
+			else
+			{
+				using (var p = new Process())
+				{
+					p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard -o")
+					{
+						UseShellExecute = false,
+						RedirectStandardOutput = true,
+					};
+					p.Start();
+					pasteText = p.StandardOutput.ReadToEnd();
+					p.WaitForExit();
+				}
+			}
 #endif
             return pasteText;
         }
@@ -496,8 +529,8 @@ namespace MyShogi.Model.Resource.Sounds
                 if (_playerProcess == null || _playerProcess.HasExited)
                     return;
 #elif LINUX
-				var playerExePath = "/usr/bin/aplay";
-				if (!File.Exists(playerExePath))
+				//var playerExePath = "/usr/bin/aplay";
+				if (!File.Exists("/usr/bin/aplay"))
 					return;
 
 				Console.WriteLine("wav = {0}", filename);
