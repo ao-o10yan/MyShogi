@@ -254,7 +254,7 @@ namespace MyShogi.Model.Dependency
                 p.WaitForExit();
             }
 #elif LINUX
-            // Linux用、あとで実装する。
+            // Linux用、別途xclipのインストールが必要。
 			if (!File.Exists("/usr/bin/xclip"))
 				return;
 
@@ -292,7 +292,7 @@ namespace MyShogi.Model.Dependency
                 p.WaitForExit();
             }
 #elif LINUX
-            // Linux用、あとで実装する。
+            // Linux用、別途xclipのインストールが必要。
 			if (!File.Exists("/usr/bin/xclip"))
 			{
 				pasteText = null;
