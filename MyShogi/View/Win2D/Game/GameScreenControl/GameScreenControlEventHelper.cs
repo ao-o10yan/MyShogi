@@ -288,9 +288,14 @@ namespace MyShogi.View.Win2D
             var kifu = kifuControl;
             if (kifu.ViewModel.DockState == DockState.InTheMainWindow)
             {
-                kifu.Size = CalcKifuWindowSize();
-                kifu.Location = CalcKifuWindowLocation();
-                kifu.OnResize(AffineMatrix.Scale.X);
+                using (var slb = new SuspendLayoutBlock(kifu))
+                {
+                    // (起動時) 先にLocationを移動させておかないとSizeの変更で変なところに表示されて見苦しい。
+                    // ※　理由はよくわからない。DockStyle.Noneにした影響か何か。
+                    kifu.Size = Size.Empty; // resizeイベントが生起するようにいったん(0,0)にする。
+                    kifu.Location = CalcKifuWindowLocation();
+                    kifu.Size = CalcKifuWindowSize();
+                }
             }
 
             // 駒台が縦長のモードのときは、このコントロールは非表示にする。
@@ -325,7 +330,6 @@ namespace MyShogi.View.Win2D
             int w_offset = (int)(w_rate * 265);
 
             var point = new Point(229 - w_offset, 600);
-            var kifu = kifuControl;
             return Affine(point);
         }
 
@@ -373,6 +377,14 @@ namespace MyShogi.View.Win2D
         {
             Dirty = true;
             Invalidate();
+        }
+
+        /// <summary>
+        /// リサイズイベントと等価な処理。
+        /// </summary>
+        public void ForceRedraw2()
+        {
+            GameScreenControl_SizeChanged(null,null);
         }
 
         /// <summary>

@@ -10,7 +10,6 @@
 // ・macOS →　MACOS
 // ・Linux →　LINUX
 
-using MyShogi.Model.Shogi.EngineDefine;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -20,6 +19,7 @@ using System.IO;
 using System.Reflection;
 using MyShogi.Model.Common.String;
 using MyShogi.Model.Common.Tool;
+using MyShogi.Model.Shogi.EngineDefine;
 
 // --- 単体で呼び出して使うAPI群
 
@@ -81,7 +81,7 @@ namespace MyShogi.Model.Dependency
                 Log.Write(LogInfoType.SystemError, $"GetProcessorCores() , success = {success} , processor_cores = {processor_cores}");
                 processor_cores = 1;
             }
-			Console.WriteLine("success = {0}, processor_cores = {1}", success, processor_cores);
+
             return processor_cores;
         }
 
@@ -146,7 +146,6 @@ namespace MyShogi.Model.Dependency
                     c = CpuType.NO_SSE;
 
                 process.WaitForExit();
-				Console.WriteLine("c = CpuType.{0}", c);
                 return c;
             }
         }
@@ -219,7 +218,6 @@ namespace MyShogi.Model.Dependency
 #endif
                 }
                 process.WaitForExit();
-				Console.WriteLine("freeMemory = {0}b", freeMemory);
                 return freeMemory;
             }
         }
@@ -254,9 +252,10 @@ namespace MyShogi.Model.Dependency
                 p.WaitForExit();
             }
 #elif LINUX
+            // Linux用 "xclip"がインストールされていることを前提とできるなら、xclipを呼べば良い。
             // Linux用、別途xclipのインストールが必要。
-			if (!File.Exists("/usr/bin/xclip"))
-				return;
+            if (!File.Exists("/usr/bin/xclip"))
+                return;
 
             using (var p = new Process())
             {
@@ -293,24 +292,24 @@ namespace MyShogi.Model.Dependency
             }
 #elif LINUX
             // Linux用、別途xclipのインストールが必要。
-			if (!File.Exists("/usr/bin/xclip"))
-			{
-				pasteText = null;
-			}
-			else
-			{
-				using (var p = new Process())
-				{
-					p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard -o")
-					{
-						UseShellExecute = false,
-						RedirectStandardOutput = true,
-					};
-					p.Start();
-					pasteText = p.StandardOutput.ReadToEnd();
-					p.WaitForExit();
-				}
-			}
+            if (!File.Exists("/usr/bin/xclip"))
+            {
+                pasteText = null;
+            }
+            else
+            {
+                using (var p = new Process())
+                {
+                    p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard -o")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                    };
+                    p.Start();
+                    pasteText = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit();
+                }
+            }
 #endif
             return pasteText;
         }

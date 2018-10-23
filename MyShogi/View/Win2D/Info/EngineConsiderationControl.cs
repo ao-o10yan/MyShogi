@@ -238,9 +238,10 @@ namespace MyShogi.View.Win2D
 
                 // 形勢判断の文字列を出力する。
                 var evalJudgement = TheApp.app.Config.DisplayEvalJudgement;
+                var handicapped = position.Handicapped;
                 var evalJudgementString = (evalJudgement == 0 || info.Eval == null) ? null :
-                    !isWhite ? info.Eval.Eval.ToEvalJudgement() : // 先手
-                    info.Eval.negate().Eval.ToEvalJudgement();    // 後手
+                    !isWhite ? info.Eval.Eval.ToEvalJudgement(handicapped) : // 先手
+                    info.Eval.negate().Eval.ToEvalJudgement(handicapped);    // 後手
                 
                 if (isWhite && TheApp.app.Config.NegateEvalWhenWhite)
                 {
@@ -358,11 +359,6 @@ namespace MyShogi.View.Win2D
             var boxes = new Control[] { textBox1 , textBox2, textBox3 , textBox4, textBox5 , button1 , comboBox1 };
             foreach (var box in boxes)
                 box.Font = font;
-        }
-
-        private void listView1_Resize(object sender, System.EventArgs e)
-        {
-            UpdatePvWidth();
         }
 
         private void listView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
@@ -558,13 +554,20 @@ namespace MyShogi.View.Win2D
             if (listView1.Columns.Count == 0)
                 return;
 
-            int sum_width = 0;
+            int sum_width = 0; //  listView1.Margin.Left + listView1.Margin.Right;
             int i = 0;
             for (; i < listView1.Columns.Count - 1; ++i)
                 sum_width += listView1.Columns[i].Width;
 
+            // これ、ちゃんと設定してやらないと水平スクロールバーが出てきてしまう。
+            var newWidth = Math.Max(listView1.ClientSize.Width - sum_width,0);
+
+            // Widthにはマイナスの値を設定しても0に補整される。この結果、上のMax()がないと、newWidthがマイナスだと
+            // このifは成立してしまい、代入によってイベントが生起されるので無限再帰となる。
+
             // Columnsの末尾が「読み筋」の表示であるから、この部分は、残りの幅全部にしてやる。
-            listView1.Columns[i /* is the last index*/].Width = ClientSize.Width - sum_width;
+            if (listView1.Columns[i].Width != newWidth)
+                listView1.Columns[i /* is the last index*/].Width = newWidth;
         }
 
         /// <summary>
@@ -689,5 +692,10 @@ namespace MyShogi.View.Win2D
         /// </summary>
         private List<List<Move>> list_item_moves = new List<List<Move>>();
 
+        private void listView1_ClientSizeChanged(object sender, EventArgs e)
+        {
+            // スクロールバーが非表示から表示になったときに水平スクロールバーがでるのを抑制する。
+            UpdatePvWidth();
+        }
     }
 }

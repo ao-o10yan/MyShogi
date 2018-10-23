@@ -108,11 +108,14 @@
     <Compile Include="Model\Dependency\Windows\WindowsAPI.cs" />
     <Compile Include="Model\Shogi\Converter\SvgUtility.cs" />
     <Compile Include="Model\Common\Utility\Swap.cs" />
+    <Compile Include="Model\Shogi\Kifu\KifuListRow.cs" />
     <Compile Include="View\Win2D\Common\ClickAction.cs" />
+    <Compile Include="View\Win2D\Common\DockUtility.cs" />
     <Compile Include="View\Win2D\Common\KeyboardShortcutHelper.cs" />
     <Compile Include="View\Win2D\Common\MenuStripEx.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="View\Win2D\Common\SuspendLayoutBlock.cs" />
     <Compile Include="View\Win2D\Common\ToolStripEx.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -281,7 +284,7 @@
     <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.Designer.cs">
+    <Compile Include="View\Win2D\Info\EngineConsiderationMainControl.designer.cs">
       <DependentUpon>EngineConsiderationMainControl.cs</DependentUpon>
     </Compile>
     <Compile Include="View\Win2D\Info\MessageDialog.cs">
