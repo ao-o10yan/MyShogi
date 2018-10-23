@@ -64,6 +64,7 @@
             this.pictureBox1.Location = new System.Drawing.Point(9, 42);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(100, 50);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
@@ -79,6 +80,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.groupBox1);
+            this.DoubleBuffered = true;
             this.Name = "RichSelector";
             this.Size = new System.Drawing.Size(390, 110);
             this.SizeChanged += new System.EventHandler(this.RichSelector_SizeChanged);

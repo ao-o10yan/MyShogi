@@ -1,12 +1,13 @@
 ﻿using System.Drawing;
 using System.Runtime.Serialization;
+using MyShogi.Model.Common.ObjectModel;
 
 namespace MyShogi.Model.Common.Tool
 {
     /// <summary>
     /// 置換すべきフォント名などを一元的に管理している。
     /// </summary>
-    public class FontManager
+    public class FontManager : NotifyObject
     {
         public FontManager()
         {
@@ -27,64 +28,120 @@ namespace MyShogi.Model.Common.Tool
         }
 
         /// <summary>
+        /// フォントの最大サイズ
+        /// </summary>
+        public static readonly int MAX_FONT_SIZE = 40;
+
+        /// <summary>
+        /// フォントの最小サイズ
+        /// </summary>
+        public static readonly int MIN_FONT_SIZE = 6;
+
+        /// <summary>
         /// 対局設定・エンジン設定ダイアログなどのフォント
         /// </summary>
         [DataMember]
-        public FontData SettingDialog { get; set; }
+        public FontData SettingDialog
+        {
+            get { return GetValue<FontData>("SettingDialog"); }
+            set { SetValue("SettingDialog", value); }
+        }
 
         /// <summary>
         /// メニューのフォント
         /// </summary>
         [DataMember]
-        public FontData MenuStrip { get; set; }
+        public FontData MenuStrip
+        {
+            get { return GetValue<FontData>("MenuStrip"); }
+            set { SetValue("MenuStrip", value); }
+        }
 
         /// <summary>
         /// メインウインドウに配置しているToolStripのフォント
         /// </summary>
         [DataMember]
-        public FontData MainToolStrip { get; set; }
+        public FontData MainToolStrip
+        {
+            get { return GetValue<FontData>("MainToolStrip"); }
+            set { SetValue("MainToolStrip", value); }
+        }
 
         /// <summary>
         /// ミニ盤面下に配置しているToolStripのフォント
         /// </summary>
         [DataMember]
-        public FontData SubToolStrip { get; set; }
+        public FontData SubToolStrip
+        {
+            get { return GetValue<FontData>("SubToolStrip"); }
+            set { SetValue("SubToolStrip", value); }
+        }
 
         /// <summary>
         /// メッセージダイアログのフォント
         /// </summary>
         [DataMember]
-        public FontData MessageDialog { get; set; }
+        public FontData MessageDialog
+        {
+            get { return GetValue<FontData>("MessageDialog"); }
+            set { SetValue("MessageDialog", value); }
+        }
 
         /// <summary>
         /// メインウインドウ上のフォント(対局者名など)
         /// </summary>
         [DataMember]
-        public FontData MainWindow { get; set; }
+        public FontData MainWindow
+        {
+            get { return GetValue<FontData>("MainWindow"); }
+            set { SetValue("MainWindow", value); }
+        }
 
         /// <summary>
         /// 棋譜ウインドウのフォント
         /// </summary>
         [DataMember]
-        public FontData KifuWindow { get; set; }
+        public FontData KifuWindow
+        {
+            get { return GetValue<FontData>("KifuWindow"); }
+            set { SetValue("KifuWindow", value); }
+        }
 
         /// <summary>
         /// 検討ウインドウのフォント
         /// </summary>
         [DataMember]
-        public FontData ConsiderationWindow { get; set; }
+        public FontData ConsiderationWindow
+        {
+            get { return GetValue<FontData>("ConsiderationWindow"); }
+            set { SetValue("ConsiderationWindow", value); }
+        }
 
         /// <summary>
         /// ToolTip
         /// </summary>
         [DataMember]
-        public FontData ToolTip { get; set; }
+        public FontData ToolTip
+        {
+            get { return GetValue<FontData>("ToolTip"); }
+            set { SetValue("ToolTip", value); }
+        }
 
         /// <summary>
         /// デバッグウインドウ用
         /// </summary>
         [DataMember]
-        public FontData DebugWindow { get; set; }
+        public FontData DebugWindow
+        {
+            get { return GetValue<FontData>("DebugWindow"); }
+            set { SetValue("DebugWindow", value); }
+        }
+
+        /// <summary>
+        /// 仮想イベント。フォントが変更になった時にこれが呼び出される。
+        /// (ようになっているものとする) 変更になった場所 ("DebugWindow")などがargs.valueに入ってくるものとする。
+        /// </summary>
+        //public string FontChanged;
 
     }
 
@@ -109,6 +166,10 @@ namespace MyShogi.Model.Common.Tool
         /// <returns></returns>
         public Font CreateFont()
         {
+            // 無理ぽ。
+            if (FontSize <= 0)
+                FontSize = 1;
+
             return new Font(FontName, FontSize, FontStyle);
         }
 

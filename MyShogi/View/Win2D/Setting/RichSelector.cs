@@ -15,6 +15,9 @@ namespace MyShogi.View.Win2D.Setting
         /// <summary>
         /// GroupBox内に複数個のRaidoButtonがあり、そこから選択するためのUserControl。
         /// 画像から選択できる。
+        ///
+        /// 画像は100×50pxで用意すること。ただしPictureBoxに境界線が設定されているため、実際に表示される領域は
+        /// その内側の98×48pxである。
         /// </summary>
         public RichSelector()
         {
@@ -31,7 +34,7 @@ namespace MyShogi.View.Win2D.Setting
                 // cf. カスタムコントロールから、デザイン時にプロジェクトのパスを取得する方法 : http://www.atmarkit.co.jp/bbs/phpBB/viewtopic.php?topic=47369&forum=7&start=16
 
                 // まあ、いいや。とりま、このControlを貼り付けたFormを編集したいなら、各自、この部分を自分の環境に合わせて一時的に書き換えるってことで(；ω；)
-                ImageFolder = @"C:\Users\yaneu\Documents\Visual Studio 2017\project\MyShogi\MyShogi\bin\Debug\image\display_setting/";
+                ImageFolder = @"C:\Users\yaneu\Documents\Visual Studio 2017\project\MyShogi\MyShogi\bin\Debug\image\display_setting\";
 
                 // レジストリとか環境変数とか使うのがスマートなのかな…。
                 // どちらもあまり使いたくないのだが…。
@@ -193,22 +196,30 @@ namespace MyShogi.View.Win2D.Setting
                 var rx = x  /* + radioButton1.Location.X */;
                 r.Location = new Point(rx , radioButton1.Location.Y);
                 r.Text = texts[0];
+
                 var j = i; // copy for lambda's capture
                 r.CheckedChanged += (sender, args) => {
                     if (r.Checked)
                     {
                         // 再起動するように警告表示
-                        if (ViewModel.WarningRestart)
+                        if (ViewModel.WarningRestart && ViewModel.Selection != j)
                             TheApp.app.MessageShow("この変更が反映するのは次回起動時です。", MessageShowType.Confirmation);
 
                         ViewModel.Selection = j;
                     }
                 };
+
+                // 先にCheckを変更しないと、このあとのCheckedChangedのイベントハンドラが呼び出されてしまう。
+                // →　先に変更しても無駄だった。そうか…。上のハンドラのなかに
+                // " && ViewModel.Selection = j "を追加する。
                 r.Checked = i == ViewModel.Selection;
+
                 radioButtons[i] = r;
                 groupBox1.Controls.Add(r);
 
                 var p = new PictureBox();
+                // 引き伸ばしておく。
+                p.SizeMode = PictureBoxSizeMode.StretchImage;
                 var x2 = x;
                 p.Location = new Point(x2 , pictureBox1.Location.Y);
                 p.Size = pictureBox1.Size; // サイズは固定しておいたほうが扱いやすい
@@ -218,13 +229,11 @@ namespace MyShogi.View.Win2D.Setting
                 groupBox1.Controls.Add(p);
 
                 var img = new ImageLoader();
-                var tmp_img = new ImageLoader();
-
                 var path = Path.Combine(ImageFolder, texts[1]);
-                tmp_img.Load(path);
-                images[i] = tmp_img.CreateAndCopy(p.Width,p.Height);
+                img.Load(path);
+                images[i] = img;
                 p.Image = images[i].image;
-
+                
                 // ToolTipの追加。
                 if (texts.Length >= 3)
                 {
@@ -245,9 +254,9 @@ namespace MyShogi.View.Win2D.Setting
         private Control[] radioButtons;
         private Control[] pictureBoxes;
         private ImageLoader[] images;
-        #endregion
+#endregion
 
-        #region handlers
+#region handlers
         private void RichSelector_SizeChanged(object sender, System.EventArgs e)
         {
             // サイズが変更されたら、それに合わせたGroupBoxのサイズに変更する。
@@ -268,6 +277,6 @@ namespace MyShogi.View.Win2D.Setting
                 foreach (var img in images)
                     img?.Dispose();
         }
-        #endregion
+#endregion
     }
 }

@@ -1,6 +1,372 @@
 ﻿
+- 検討ウインドウの現在選択されている読み筋に対して「再クリック」もしくは「スペースキー」で再度ミニ盤面にその読み筋が反映されて欲しい。
+
+
+■　2018/10/24
+
+
+- 棋譜ウインドウの分岐のときにもう少しわかりやすい表示にする。
+  - 考えたけど、どうにもならん…。
+  - 背景色変更ぐらいはできそうだが…。
+
+
+■　2018/10/23
+
+
+- DockStyleの変更、DockUtilityに移動させる。
+  MainWindowのDockStyleの変更部分、綺麗に整理した。
+  - 相変わらずLinuxではDockStyleの変更後、再描画イベントおきない。なんなんこれ…。
+- MessageShow()に関して、例外の場合は、Consoleにも出力するようにした。
+        // Linuxでデバッグするときなど、例外が渡ってきて、ウインドウを出せずに終了することがあるので
+        // 例外に関してはメッセージをConsoleに出すほうが親切かもなー。
+
+
+- Ubuntu18.04で動作確認その4(とりま、これで終わり)
+  - Control1のサイズ変更してるのにウインドウのResizeイベント起きてない。なんぞこれ…。
+    - DockStyleを変更前にSizeが同じだからか…そうか…。修正した。
+    - Ctrl+Rのときに一瞬白くなるの少し嫌だが、レスポンス速くなったので良しとする。
+    - Linuxで棋譜ウインドウを浮かせた時に再描画イベント走ってない。
+      - DockStyleの変更によってresizeイベント起きない。これはMonoのbugだ。
+  - メニューで「設定」のプルダウンメニューにフォント設定が反映されていない件。
+    - 「対局」をぶら下げなければ問題ないみたい。何だこれ。
+    - 仕方がないのでFontUtilityで自前で置換する。
+  - Linuxのクリップボードの実装、AO_o10yanさんのツイートの方法で実装。
+    cf. https://twitter.com/AO_o10yan/status/1053891533043159045
+    cf. https://github.com/ao-o10yan/MyShogi/blob/linux_master/MyShogi/Model/Dependency/Mono/MonoAPI.cs
+    - サウンドのほうは、aplayを使う実装はあまり良いと思わないので、AO_o10yanにお伝えする。
+      https://twitter.com/yaneuraou/status/1054603178744762368
+      https://twitter.com/yaneuraou/status/1054603478440398848
+  - これで一通り動いたのでUbuntuで遊ぶの終わり。
+  - 検討ウインドウ、メインウインドウに埋め込んでいると描画されないみたい。なんぞこれ。
+
+
+- Ubuntu18.04で動作確認その3
+  - 単体テストだとListView.EnsureVisible()で落ちないぞ…。
+  - OwnerDrawだと列の幅を移動させたときに再描画がおかしくなる。OwnerDrawはMonoのdirtifyの処理がバグっていると見て間違いなさそう。
+  - OwnerDrawでなければ大丈夫くさい。他のところとの複合要因なのか…。うむむ…。
+  - GameScreenControlのDoubleBuffered = falseにするわけにはいかないしな。Linuxだとこれfalseにしてもちらつかないな…なんでだろう。内部的にbufferingしてるのかな。
+  - Ubuntuの棋譜ウインドウ、カーソルキーで局面を移動したり、マウスカーソルでクリックしたりはできるようだ。描画だけがなされない。なんぞこれ。
+    - どこかのSuspendLayout()で描画が止まっている状態くさいのだが。
+  - メニューの「設定」の項目から右側の項目、文字フォントの変更が反映していない。MenuStripのambient propertyになっているFontが反映しない。
+  - KifuControlのListView.TopItemのnull check追加。
+  - KifuControlとEngineConsiderationControlに貼り付けてあるListViewのOwnerDraw = trueにデザイナでしてた(´ω｀)
+    - Linuxで描画されなかったの、これが原因か…。
+    - ListViewExのコードも修正。
+    - KifuControlのListViewでデザイナでMultiSelection = trueになっていたのも修正。
+  - 検討ウインドウ、メインウインドウに埋め込んでいると表示位置おかしい。Locationが利いてない。
+  - EnsureVisible悪くなかった。ListViewのOwnerDrawでおかしくなっているのだった。
+    - いや、EnsureVisibleをVisible==falseのときに呼び出すと落ちる。これはVisible==falseのケースを弾くようにする。
+- Ubuntuで『将棋神やねうら王』 (2018/10/22) : http://fxst24.blog.fc2.com/blog-entry-545.html
+  > mogrify -format png *.png
+  > これを実行しないと、MyShogiの起動時に
+  > libpng warning: iCCP: known incorrect sRGB profile
+  > という警告が出る。具体的にどのような問題が起きるのか分からないが、鬱陶しいので実行しておく。
+
+
+■　2018/10/22
+
+ 
+- Ubuntu18.04で動作確認その2
+  - 起動後、ゲーム画面のリサイズが起きないの、MainWindow、double bufferにした影響か？
+    →そうでもなさげ。とりま、Double Bufferオフにしとく。
+  - Affine行列、再セットされてない感じ。DockStyle絡む、(Monoの)resizeのバグのようだ。
+      // 1) ここ、Size()を事前に設定しないとDockStyle.Noneにした瞬間おかしいところにKifuControlが移動してしまう。
+      // 2) Monoでは、DockStyle.Noneにした瞬間に、それ以前のresizeイベントがクリアされる(?)ため、再描画がなされなくなる。
+      // 結論的には、DockStyle.Noneの前後でサイズを代入するのが良いようだ。なんぞこれ…。
+      →　2)も違うようだ。強制的にResizeイベント起こしたほうが無難っぽい。
+- バージョン表示、WebBrowserを使っているので表示自体が無理ぽ。
+  - これぐらい自前で作ったほうが良いのでは…。
+- システム情報も落ちるわｗ
+      // MonoだとManagementClass自体、未実装。
+      - #if で囲む。
+- ListViewのOwenerDrawで、無限ループになる。→　MonoのListViewのバグ。オーナードローをやめる。
+  - 無限ループになるのは回避できたが、それでもまだListViewの描画がされない。なんで…。ListViewのほうのバグではないのでは…。
+  - 簡単なサンプルを作って動作確認すべき。
+- バージョン表示、WebBrowserを使っているので表示自体が無理ぽ。
+  - これぐらい自前で作りなおす。
+- RichSelctorをPictureBox.StretchImageを使うように変更。
+- あとはListViewだけか…。
+
+
+- Ubuntu18.04で動作確認その1
+  - cf. Ubuntuで『将棋神やねうら王』 (2018/10/22) : http://fxst24.blog.fc2.com/blog-entry-545.html
+  - ListViewExでOwnerDrawにすると無限再帰になってメッセージの処理ができなくなる。これもMono(Linux)のバグくさい。
+    - DrawSubItemのイベントで描画したときに画面が汚れた判定になっていて、再描画イベントがまた飛んでくるのがおかしい。
+    - これのせいでメッセージを処理できなくなり、メニューなどが描画されない。
+    - Linux用のビルドだけ、ListViewExでOwnerDrawにするのやめる。
+  - SuspendLayoutBlockの実装、入れ子にしたときの処理がおかしかったの修正。
+- 棋譜ウインドウのコードがLinuxで動かない件。
+  - Mono(Mac)でKifuControl.csの以下のEnsureVisibleで例外が出る件、呼び出しているところ、Mac用に #if #endifで囲む。
+    - Linuxも同様の問題があるらしい。現バージョンのMono自体のbugっぽい。
+-  デバッグシンボルを出力するなら以下のようにする？これでもスタックトレースが表示されない。なんで…。ああ、msbuildでbuildするからか…。
+  > msbuild MyShogi.sln /p:DebugSymbols=true /p:Configuration=LINUX
+- 例外が出たときのMessageDialogのテキストボックス、readonlyにしてなかったの修正。
+- PlayerSettingControl、ファイルEngineDefine.xmlを別フォルダに移動させたときにぬるぽで落ちるの修正。
+- Linux環境でエンジン選択のときにエンジンバナー出ていない。
+  - png画像、32bppになっているから、MonoのCreateBitmapの地雷を踏んでるのか…。ハゲそう。
+
+        public static void SetAlpha255(Image src)
+        {
+            if (src.PixelFormat == System.Drawing.Imaging.PixelFormat.Format32bppArgb && src is Bitmap)
+            {
+                var src_ = src as Bitmap;
+                var srcRect = new Rectangle(0, 0, src.Width, src.Height);
+                var data = src_.LockBits(srcRect, ImageLockMode.ReadWrite,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+                var length = src.Width * src.Height * 4;
+                for (int i = 0; i < length; i += 4)
+                {
+                    // alpha = 255
+                    Marshal.WriteByte(data.Scan0, i + 3, 255);
+                }
+                src_.UnlockBits(data);
+            }
+        }
+  - このコードでは回避できず。転送先をARGB32に変更。
+
+
+- 段位プリセットにレーティング併記する。例:「(R400)」
+
+
+■　2018/10/20
+
+
+- やねうら王2018のEngineDefineに書かれている実行ファイル名の先頭が小文字になっていたのでMac/Linux環境で実行に失敗していた問題を修正。
+  (EngineDefine作り直した)
+  - cf. Ubuntuで『将棋神やねうら王』 (2018/10/19) : http://fxst24.blog.fc2.com/blog-entry-545.html
+  > (注) 思考エンジンのファイル名は本来は「Yaneuraou2018_kpp_kkpt_sse42.exe」である。
+  だが、MyShogiは「yaneuraou2018_kpp_kkpt_sse42.exe」で読み込もうとするため、対局、
+  または検討時にやねうら王2018年度版を選択すると、MyShogiが落ちてしまう。
+
+
+- Mono(Mac)でKifuControl.csの以下のEnsureVisibleで例外が出る件、呼び出しているところ、Mac用に #if #endifで囲む。
+
+
+- 起動時に棋譜ウインドウが一瞬画面左上あたりに表示されるの修正。
+  - それでも一瞬、検討ウインドウをメインウインドウに埋め込んでいないときの位置に表示されるのとか、修正できるなら
+    修正したいが、これは大改造になりかねないのでやめとく。
+
+- Mono(Mac)でKifuControl.csの以下のEnsureVisibleで例外が出るらしい。MonoのScrollbarまわりの実装bugっているのでは。
+                    var index = ViewModel.KifuListSelectedIndex;
+                    if (0 <= index && index < listView1.Items.Count)
+                        listView1.EnsureVisible(index);
+
+
+- MonoAPI.csのGetFreePhysicalMemory、MacとLinuxの両方の単位間違えてたので修正。
+
+
+- Mac : 最新のサウンドプレイヤーで動くように修正。 #62(jnoryさんのプルリク)
+  * 最新のサウンドプレイヤーで動くように修正。
+  * _playerProcessの状態を確認
+
+
+■　2018/10/19
+
+
+- Mac、Linuxで動作させるには.mdにフリーの音声素材の件を追記。
+
+
+- 検討ウインドウも行数増えたときに垂直スクロールバーが出てClientSizeが縮むと水平スクロールバーが出るのを修正。
+  - 一応Resize()で列幅の調整をやってたが、これはClientSizeChanged()でやるように変更。
+
+
+- "1.3.1"→"1.3.1a" [2018/10/19]-[2018/10/19]
+
+
+- 棋譜ウインドウ、ListViewのheader生成前に列幅調整しようとして(特定環境で)落ちるの修正。(tanishiさん)
+- 棋譜ウインドウ、スクロールバーが出てくると時間の列が隠れる。
+  - スクロールバーの列の幅を見越して列の幅の調整をすべきでは…。
+  - スクロールバーが出るときにClientSizeが変わるのでハンドルするように。
+
+
+- 棋譜ウインドウ、OwnerDrawに変更したので分岐棋譜をもう少しわかりやく色変更したり出来なくはないが…。
+  - 色変更、見にくくなると嫌だし、電王盤と違って、本譜以外の分岐がすべて枝葉末節かというとそうでもないし。
+  - いまのままでいいや…。そんなに悪い表現ではないと思う。
+  - 分岐に'*'を使ってしまったので、棋譜コメントのある行に'*'が使えないのか…。うーむ..？
+  - Cにするか。
+  - 指し手の右側らへんに 💬 とかがわかりやすくて良いのでは…。(このUnicode文字、あるのかどうかは知らんが..)
+    - 表示設定で選べるといいのかも…。
+
+
+- 表示設定ダイアログのタブ切り替えたときにちらつくの何故？
+  - DoubleBuffer trueになっているのに…。
+  - RichSelectorとFontSelectorのこのプロパティもtrueに変更。
+    - 少しだけマシになった。
+  - TabControlのDoubleBufferは利かないらしい。
+    - cf. TabControl（Page）上のコントロール再描画ちらつきを抑制したい : http://www.atmarkit.co.jp/bbs/phpBB/viewtopic.php?topic=39187&forum=7
+
+    // 以下のコードでDoubleBufferが利くようになるようだが、他の部分に支障が出かねない。やめとく。
+    // WindowsAPIの実装に不具合があるので、.NETではDoubleBufferを反映しない実装になっているのかな…。うむむ…。
+
+        コード:	
+        Public Class BufferedTabControl
+            Inherits TabControl
+            Private WS_EX_COMPOSITED As Integer = &H2000000
+
+            Protected Overrides ReadOnly Property CreateParams() As System.Windows.Forms.CreateParams
+                Get
+                    Dim c As CreateParams
+                    c = MyBase.CreateParams
+                    c.ExStyle = c.ExStyle Or Me.WS_EX_COMPOSITED
+                    Return c
+                End Get
+            End Property
+        End Class
+
+
+
+- V1.3.1リリース。
+  - eval : MyShogi201807260000Eval.zip
+  - 本体 : MyShogi201810190830V131.zip
+- "1.3.0"→"1.3.1" [2018/10/15]-[2018/10/19]
+  - Configのバージョンナンバー変更するの忘れてた
+
+
+- 棋譜ウインドウの総消費時間を表示していないときに3列目の幅の値を保存しないようにする。
+      // (総消費時間を表示していない状態で3列目を記録してしまい、そのあと総消費時間(4列目)を表示すると
+      // 3列目が残り幅いっぱいになっていて、4列目が表示されていないように見えるため)
+
+
+- 棋譜に総消費時間を表示するかを表示設定で選べるように。(デフォルト、オフでもいいような…)
+  しない,kifwindow_totaltime_style_0.png,棋譜ウインドウに総消費時間を表示しません。
+  する,kifwindow_totaltime_style_1.png,棋譜ウインドウに総消費時間を表示します。
+- とりあえず、総消費時間、きちんと入るようになった。special moveの総消費時間の処理は、まだ。(これは難しい)
+- 棋譜の表示形式を変更すると表示設定ダイアログを開くときに、「この変更が反映するのは次回起動時です」というダイアログが出ていたの修正。
+- 総消費時間を表示していないときは、「時間」の列が残り幅いっぱいになるようにする。
+
+
+- MonoAPI.csのGetFreePhysicalMemory()すでに1024で割ってたの修正。(fxst24さん)
+
+
+■　2018/10/18
+
+
+- 総消費時間、棋譜ウインドウに出力するように。その2。
+
+
+- 総消費時間、棋譜ウインドウに出力するように。
+  - トータルの計算がまだ。あとで実装する。
+- 棋譜ウインドウの列幅を記憶するコード追加する。
+
+
+- 棋譜ウインドウのボタン高さ、固定する。
+- 棋譜ウインドウのTabStopやめる。(動的にEnableが変化するのでTabStop、あまり嬉しくない)
+- 棋譜ウインドウのスクロールの3行前ぐらいが表示される処理
+  - EnsureVisible()で実装しなおした。
+- 棋譜ウインドウをDockするときに選択行が変わる。うわー。何これ。
+  - 前からあるバグのようであった。修正した。
+- 水平スクロールバー、消せない。吐きそう。
+      OnPaint()とかでやる必要がありそう。これ良くないな…。やめよう。
+  - ちゃんとClientSize.Widthから引き算すればぴったりになって、水平スクロールバー出ない。
+
+      listView1.ShowHorizontalScrollBar(false);
+
+#if !MONO
+        [System.Runtime.InteropServices.DllImport("user32")]
+        public static extern int ShowScrollBar(IntPtr handle, int wBar, bool bShow);
+        /// <summary>
+        /// 水平スクロールバーを有効/無効(デフォルト有効)
+        /// </summary>
+        /// <param name="b"></param>
+        public void ShowHorizontalScrollBar(bool b)
+        {
+            ShowScrollBar(this.Handle, 0 /* SB_HORZ */ , b );
+        }
+#else
+        public void ShowHorizontalScrollBar(bool b){}
+#endif
+
+
+- 検討ウインドウの読み筋の幅を計算するコード、サイズが小さいと無限再帰になりかねないの修正。
+- 棋譜ウインドウのListView、非選択状態になるのどうにかならんのか…。
+  - 項目のない列が選択されたときに非選択状態になる。
+  - これListViewExのほうでの修正は困難。KifuWindowのresizeイベントで列幅いっぱいにする。
+  - 項目がないと非選択になるのか…。うわー。
+
+        private void listView1_MouseDown(object sender, MouseEventArgs e)
+        {
+            // 項目のない場所のクリックで行が非選択状態になるのを回避するため、
+            // Itemのない場所のクリックを禁止とする。
+            var selection = listView1.GetItemAt(e.X, e.Y);
+            if (selection == null)
+            {
+                e.Cancel = true;
+                // このメソッドがない
+            }
+        }
+
+  - SelectedIndexChangedではなくItemSelectionChangedを使うべきなのか。
+  - 違うわ。Application.Idle使うのか。こんなの気づかん…。
+
+        // このアイデアは以下の掲示板の書き込みによるもの。
+        // cf. ListViewの選択関連のイベント : https://dobon.net/vb/bbs/log3-55/32345.html
+
+
+- 棋譜ウインドウ、メインウインドウに埋め込み時もフォントサイズを固定するように変更。
+  - 棋譜ウインドウ、ListViewを使って書き直す。
+  - こうしておかないと等幅フォント以外で消費時間のところがずれる。
+  - 手数、指し手、(消費)時間、総(消費)時間
+  - KifuListRow.cs追加。
+  - 棋譜ウインドウ、大改造になった(´ω｀)
+  - 棋譜ウインドウ、メインウインドウに埋め込み時も + - でフォントサイズ変更を可能に
+  - 棋譜ウインドウ、メインウインドウに埋め込み時のフォントサイズを自動調整するのやめて、表示設定に従うように変更する。
+  - 棋譜ウインドウのフォントも即時反映にする。
+  - 棋譜ウインドウのサイズはFontManagerのconstの設定に従うように。
+- ListViewをListBoxと同じ挙動にするのめっちゃ難しい。何これ、吐きそう。
+- 検討ウインドウ、選択行、focusがないときでも見えるように。
+  - ListViewをOwnerDrawに変更した。
+- 検討ボタンを押した時に検討ウインドウが非表示の場合、自動で表示するようにした。これは、さすがに表示してくれないと不便だと思う。
+
+
+- 表示設定のフォント変更、即時反映にする。
+  - フォント設定のところに「+」と「-」を追加する。このボタンで1pt up/down可能に。
+  - 棋譜ウインドウは対応まだ。
+
+
+- LocalGameServer.Struct、小文字のフォルダ残ってたのを削除
+  - Gitで大文字と小文字両方のフォルダができてしまったときにどちらか片方を消す方法
+    https://qiita.com/inductor/items/6d58afd9f6b741208439
+  - あかん。なおらへん(´ω｀)
+  - このフォルダ、いったん削除して、ファイル、つくりなおすわ…。なんなんこれ…。
+
+
+- 形勢表記、駒落ちのときは上手・下手にする。(tanadai56さん)
+
+
+- DockWindowなどの最大化防ぐべき。
+  - タイトルバーがダブルクリックされるのを防がないと…。
+  - cf. フォームを最大化、最小化できないようにする : https://dobon.net/vb/dotnet/form/preventmaximize.html
+  - Windows限定になってしまうが、まあ仕方がないな…。
+- 棋譜ウインドウ、ResizeのときなどにちらつくのでSuspendLayout～ResumeLayout追加。
+- Mac/Linux向けに、思考エンジン側のビルド手順、追記。改行修正。
+
+
+- Mac/Linux向けに、思考エンジン側のビルド手順、追記。
+
+
+■　2018/10/17
+
+
+- LinuxのgetProcessCoreで落ちるの修正。
+
+
+- LinuxのGetCurrentCpu()などを ao-o10yanさんのプルリクを参考に修正。
+  - https://github.com/yaneurao/MyShogi/pull/61
+  - https://github.com/ao-o10yan/MyShogi/commit/cd5513fc6efa5609a312134a2d6ac73eda7b010b
+
+- LocalGameServer/structsをStructsと変更したのがGitHub上に反映していなかった件。
+  - git config core.ignorecase false
+
+
 
 ■　2018/10/15
+
+
+- V1.3.0リリース。
+  - eval : MyShogi201807260000Eval.zip
+  - 本体 : MyShogi201810150450V130.zip
+- "1.2.9"→"1.3.0" [2018/10/14]-[2018/10/15]
 
 
 - マウス追随モードで成り・不成のダイアログが出ているときに「転」ボタンを押すと180度回転させた升に移動させるように見える。

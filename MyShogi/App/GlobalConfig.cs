@@ -23,7 +23,7 @@ namespace MyShogi.App
         /// 『将棋神やねうら王』のUpdate1.3 は、"1.1.3"。→　マイナビ公式で配布[2018/09/03]
         /// 『将棋神やねうら王』のUpdate2   は、"1.2.4"。→　マイナビ公式で配布[2018/10/10]
         /// </summary>
-        public static readonly string MYSHOGI_VERSION_STRING = "1.3.0";
+        public static readonly string MYSHOGI_VERSION_STRING = "1.3.2";
 
 
         public GlobalConfig()
@@ -49,6 +49,10 @@ namespace MyShogi.App
 
             EnableMouseDrag = 1;
             PickedMoveDisplayStyle = 1;
+
+            // 棋譜
+
+            KifuWindowDisplayTotalTime = 0;
 
             // -- 評価値
 
@@ -316,6 +320,19 @@ namespace MyShogi.App
         {
             get { return GetValue<int>("KifuWindowKifuVersion"); }
             set { SetValue<int>("KifuWindowKifuVersion", value); }
+        }
+
+        /// <summary>
+        /// 棋譜ウインドウに総消費時間を表示するのか
+        ///
+        /// 0 : しない ←　デフォルト
+        /// 1 : する
+        /// </summary>
+        [DataMember]
+        public int KifuWindowDisplayTotalTime
+        {
+            get { return GetValue<int>("KifuWindowDisplayTotalTime"); }
+            set { SetValue<int>("KifuWindowDisplayTotalTime", value); }
         }
 
         /// <summary>
@@ -717,6 +734,12 @@ namespace MyShogi.App
         /// </summary>
         [DataMember]
         public DockManager KifuWindowDockManager = new DockManager();
+
+        /// <summary>
+        /// 棋譜ウィンドウの各Columnの幅 将来的な拡張を考慮して6個用意しとく
+        /// </summary>
+        [DataMember]
+        public NotifyCollection<int> KifuColumnWidth { get; set; } = new NotifyCollection<int>(6);
 
         /// <summary>
         /// 検討ウィンドウの各Columnの幅(先後共通)
