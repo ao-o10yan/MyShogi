@@ -10,6 +10,7 @@
 // ・macOS →　MACOS
 // ・Linux →　LINUX
 
+using MyShogi.Model.Shogi.EngineDefine;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -19,7 +20,6 @@ using System.IO;
 using System.Reflection;
 using MyShogi.Model.Common.String;
 using MyShogi.Model.Common.Tool;
-using MyShogi.Model.Shogi.EngineDefine;
 
 // --- 単体で呼び出して使うAPI群
 
@@ -81,7 +81,7 @@ namespace MyShogi.Model.Dependency
                 Log.Write(LogInfoType.SystemError, $"GetProcessorCores() , success = {success} , processor_cores = {processor_cores}");
                 processor_cores = 1;
             }
-
+			Console.WriteLine("success = {0}, processor_cores = {1}", success, processor_cores);
             return processor_cores;
         }
 
@@ -146,6 +146,7 @@ namespace MyShogi.Model.Dependency
                     c = CpuType.NO_SSE;
 
                 process.WaitForExit();
+				Console.WriteLine("c = CpuType.{0}", c);
                 return c;
             }
         }
@@ -218,6 +219,7 @@ namespace MyShogi.Model.Dependency
 #endif
                 }
                 process.WaitForExit();
+				Console.WriteLine("freeMemory = {0}b", freeMemory);
                 return freeMemory;
             }
         }
@@ -252,10 +254,9 @@ namespace MyShogi.Model.Dependency
                 p.WaitForExit();
             }
 #elif LINUX
-            // Linux用 "xclip"がインストールされていることを前提とできるなら、xclipを呼べば良い。
             // Linux用、別途xclipのインストールが必要。
-            if (!File.Exists("/usr/bin/xclip"))
-                return;
+			if (!File.Exists("/usr/bin/xclip"))
+				return;
 
             using (var p = new Process())
             {
@@ -292,24 +293,24 @@ namespace MyShogi.Model.Dependency
             }
 #elif LINUX
             // Linux用、別途xclipのインストールが必要。
-            if (!File.Exists("/usr/bin/xclip"))
-            {
-                pasteText = null;
-            }
-            else
-            {
-                using (var p = new Process())
-                {
-                    p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard -o")
-                    {
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                    };
-                    p.Start();
-                    pasteText = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit();
-                }
-            }
+			if (!File.Exists("/usr/bin/xclip"))
+			{
+				pasteText = null;
+			}
+			else
+			{
+				using (var p = new Process())
+				{
+					p.StartInfo = new ProcessStartInfo("xclip", "-selection clipboard -o")
+					{
+						UseShellExecute = false,
+						RedirectStandardOutput = true,
+					};
+					p.Start();
+					pasteText = p.StandardOutput.ReadToEnd();
+					p.WaitForExit();
+				}
+			}
 #endif
             return pasteText;
         }
@@ -396,7 +397,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// メインウインドウのToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string MainToolStrip = DefaultFont3;
 
@@ -412,7 +413,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// ミニ盤面下のToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string SubToolStrip = DefaultFont3;
 
@@ -458,39 +459,40 @@ namespace MyShogi.Model.Resource.Sounds
                 {
                     // ファイルが存在しないときはreturnするが、このとき、
                     // 参照カウント自体は非0でかつ、_playerProcess == null
-#if MACOS
-                    var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
-                    if (!File.Exists(playerExePath))
-                        return;
+                    if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe")))
+					{
+						playerExeName = "SoundPlayer";
+                        var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
+                        var info = new ProcessStartInfo
+	                    {
+	                        FileName = "mono",
+	                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
 
-                    var info = new ProcessStartInfo
-                    {
-                        FileName = "mono",
-                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
+	                        CreateNoWindow = true,
+	                        UseShellExecute = false,
+	                        RedirectStandardInput = true,
+	                        RedirectStandardOutput = true,
+	                        RedirectStandardError = false,
+	                    };
 
-                        CreateNoWindow = true,
-                        UseShellExecute = false,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = false,
-                    };
+	                    var process = new Process
+	                    {
+	                        StartInfo = info,
+	                    };
 
-                    var process = new Process
-                    {
-                        StartInfo = info,
-                    };
-
-                    process.Start();
-                    _playerProcess = process;
-#elif LINUX
-                    var playerExePath = "/usr/bin/aplay";
-                    if (!File.Exists(playerExePath))
-                        return;
-#endif
+	                    process.Start();
+	                    _playerProcess = process;
+					}
+					else if (File.Exists("/usr/bin/aplay"))
+					{
+						playerExeName = "aplay";
+					}
+					else
+					{
+						return;
+					}
                 }
-
             }
-
         }
 
         /// <summary>
@@ -524,38 +526,40 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
-#if MACOS
-                if (_playerProcess == null || _playerProcess.HasExited)
-                    return;
-#elif LINUX
-				//var playerExePath = "/usr/bin/aplay";
-				if (!File.Exists("/usr/bin/aplay"))
-					return;
-
-				Console.WriteLine("wav = {0}", filename);
-				var info = new ProcessStartInfo
+				Console.WriteLine("playerExeName = {0}", playerExeName);
+				if (playerExeName == "SoundPlayer")
 				{
-					FileName = "aplay",
-					Arguments = filename,
+	                if (_playerProcess == null || _playerProcess.HasExited)
+	                {
+						return;
+					}
+					play_id = play_id_count++;
+					_playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
+	            }
 
-					CreateNoWindow = true,
-					UseShellExecute = false,
-					RedirectStandardInput = true,
-					RedirectStandardOutput = true,
-					RedirectStandardError = false,
-				};
-
-				var process = new Process
+	            if (playerExeName == "aplay")
 				{
-					StartInfo = info,
-				};
+					Console.WriteLine("wav = {0}", filename);
+					var info = new ProcessStartInfo
+					{
+						FileName = "aplay",
+						Arguments = filename,
 
-				process.Start();
-                _playerProcess = process;
-#endif
+						CreateNoWindow = true,
+						UseShellExecute = false,
+						RedirectStandardInput = true,
+						RedirectStandardOutput = true,
+						RedirectStandardError = false,
+					};
 
-                play_id = play_id_count++;
-                _playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
+					var process = new Process
+					{
+						StartInfo = info,
+					};
+
+					process.Start();
+	                _playerProcess = process;
+	            }
             }
         }
 
@@ -565,16 +569,26 @@ namespace MyShogi.Model.Resource.Sounds
         /// <returns></returns>
         public bool IsPlaying()
         {
+			//Console.WriteLine("playerExeName = {0}", playerExeName);
             if (_playerProcess == null || _playerProcess.HasExited)
+			{
+				Console.WriteLine("IsPlay = false");
                 return false;
+			}
+			else if (playerExeName == "SoundPlayer")
+			{
+				_playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
+				var result = _playerProcess.StandardOutput.ReadLine();
+				if (String.IsNullOrWhiteSpace(result))
+					return false;
 
-            _playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
-            var result = _playerProcess.StandardOutput.ReadLine();
-            if (String.IsNullOrWhiteSpace(result))
-                return false;
-
-            result = result.Trim();
-            return result == "yes";
+				result = result.Trim();
+				return result == "yes";
+			}
+			else
+			{
+				return true;
+			}
         }
 
         public void Dispose()
@@ -610,6 +624,9 @@ namespace MyShogi.Model.Resource.Sounds
 
         // 排他制御用
         private static object lockObject = new object();
+
+		//どのPlayerを用意してるか
+		private static string playerExeName;
     }
 }
 
