@@ -396,7 +396,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// メインウインドウのToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string MainToolStrip = DefaultFont3;
 
@@ -412,7 +412,7 @@ namespace MyShogi.Model.Common.Tool
 
         /// <summary>
         /// ミニ盤面下のToolStrip(ボタン)のフォント
-        /// ここ、◀ ▶ が大きく表示されるフォントでないとつらい。
+        /// ここ、? ? が大きく表示されるフォントでないとつらい。
         /// </summary>
         public static readonly string SubToolStrip = DefaultFont3;
 
@@ -458,39 +458,44 @@ namespace MyShogi.Model.Resource.Sounds
                 {
                     // ファイルが存在しないときはreturnするが、このとき、
                     // 参照カウント自体は非0でかつ、_playerProcess == null
-#if MACOS
-                    var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
-                    if (!File.Exists(playerExePath))
-                        return;
+                    if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe")))
+					{
+						playerExeName = "SoundPlayer";
+                        var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
+                        var info = new ProcessStartInfo
+	                    {
+	                        FileName = "mono",
+	                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
 
-                    var info = new ProcessStartInfo
-                    {
-                        FileName = "mono",
-                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
+	                        CreateNoWindow = true,
+	                        UseShellExecute = false,
+	                        RedirectStandardInput = true,
+	                        RedirectStandardOutput = true,
+	                        RedirectStandardError = false,
+	                    };
 
-                        CreateNoWindow = true,
-                        UseShellExecute = false,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = false,
-                    };
+	                    var process = new Process
+	                    {
+	                        StartInfo = info,
+	                    };
 
-                    var process = new Process
-                    {
-                        StartInfo = info,
-                    };
-
-                    process.Start();
-                    _playerProcess = process;
-#elif LINUX
-                    var playerExePath = "/usr/bin/aplay";
-                    if (!File.Exists(playerExePath))
-                        return;
-#endif
+	                    process.Start();
+	                    _playerProcess = process;
+					}
+					else if (File.Exists("/usr/bin/afplay"))
+					{
+						playerExeName = "afplay";
+					}
+					else if (File.Exists("/usr/bin/aplay"))
+					{
+						playerExeName = "aplay";
+					}
+					else
+					{
+						return;
+					}
                 }
-
             }
-
         }
 
         /// <summary>
@@ -524,38 +529,40 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
-#if MACOS
-                if (_playerProcess == null || _playerProcess.HasExited)
-                    return;
-#elif LINUX
-				//var playerExePath = "/usr/bin/aplay";
-				if (!File.Exists("/usr/bin/aplay"))
-					return;
-
-				Console.WriteLine("wav = {0}", filename);
-				var info = new ProcessStartInfo
+				Console.WriteLine("playerExeName = {0}", playerExeName);
+				if (playerExeName == "SoundPlayer")
 				{
-					FileName = "aplay",
-					Arguments = filename,
+	                if (_playerProcess == null || _playerProcess.HasExited)
+	                {
+						return;
+					}
+					play_id = play_id_count++;
+					_playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
+	            }
 
-					CreateNoWindow = true,
-					UseShellExecute = false,
-					RedirectStandardInput = true,
-					RedirectStandardOutput = true,
-					RedirectStandardError = false,
-				};
-
-				var process = new Process
+	            if (playerExeName == "afplay" || playerExeName == "aplay")
 				{
-					StartInfo = info,
-				};
+					Console.WriteLine("wav = {0}", filename);
+					var info = new ProcessStartInfo
+					{
+						FileName = playerExeName,
+						Arguments = filename,
 
-				process.Start();
-                _playerProcess = process;
-#endif
+						CreateNoWindow = true,
+						UseShellExecute = false,
+						RedirectStandardInput = true,
+						RedirectStandardOutput = true,
+						RedirectStandardError = false,
+					};
 
-                play_id = play_id_count++;
-                _playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
+					var process = new Process
+					{
+						StartInfo = info,
+					};
+
+					process.Start();
+	                _playerProcess = process;
+	            }
             }
         }
 
@@ -565,16 +572,26 @@ namespace MyShogi.Model.Resource.Sounds
         /// <returns></returns>
         public bool IsPlaying()
         {
+			//Console.WriteLine("playerExeName = {0}", playerExeName);
             if (_playerProcess == null || _playerProcess.HasExited)
+			{
+				Console.WriteLine("IsPlay = false");
                 return false;
+			}
+			else if (playerExeName == "SoundPlayer")
+			{
+				_playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
+				var result = _playerProcess.StandardOutput.ReadLine();
+				if (String.IsNullOrWhiteSpace(result))
+					return false;
 
-            _playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
-            var result = _playerProcess.StandardOutput.ReadLine();
-            if (String.IsNullOrWhiteSpace(result))
-                return false;
-
-            result = result.Trim();
-            return result == "yes";
+				result = result.Trim();
+				return result == "yes";
+			}
+			else
+			{
+				return true;
+			}
         }
 
         public void Dispose()
@@ -610,6 +627,9 @@ namespace MyShogi.Model.Resource.Sounds
 
         // 排他制御用
         private static object lockObject = new object();
+
+		//どのPlayerを用意してるか
+		private static string playerExeName;
     }
 }
 
