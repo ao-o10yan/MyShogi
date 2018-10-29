@@ -482,16 +482,19 @@ namespace MyShogi.Model.Resource.Sounds
 	                    process.Start();
 	                    _playerProcess = process;
 					}
-					else if (File.Exists("/usr/bin/afplay"))
+#if MACOS
+                    else if (File.Exists("/usr/bin/afplay"))
 					{
 						playerExeName = "afplay";
 					}
-					else if (File.Exists("/usr/bin/aplay"))
+#elif LINUX
+                    else if (File.Exists("/usr/bin/aplay"))
 					{
 						playerExeName = "aplay";
 					}
-					else
-					{
+#endif
+                    else
+                    {
 						return;
 					}
                 }
@@ -540,9 +543,13 @@ namespace MyShogi.Model.Resource.Sounds
 					_playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
 	            }
 
-	            if (playerExeName == "afplay" || playerExeName == "aplay")
-				{
-					Console.WriteLine("wav = {0}", filename);
+#if MACOS
+	            if (playerExeName == "afplay")
+#elif LINUX
+                if (playerExeName == "aplay")
+#endif
+                {
+                    Console.WriteLine("wav = {0}", filename);
 					var info = new ProcessStartInfo
 					{
 						FileName = playerExeName,
@@ -561,8 +568,12 @@ namespace MyShogi.Model.Resource.Sounds
 					};
 
 					process.Start();
-	                _playerProcess = process;
-	            }
+
+                    if (filename.Substring(0, 4) != "koma")
+                    {
+                        _playerProcess = process;
+                    }
+                }
             }
         }
 

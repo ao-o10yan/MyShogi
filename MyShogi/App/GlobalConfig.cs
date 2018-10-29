@@ -12,7 +12,7 @@ namespace MyShogi.App
     /// 全体設定。
     /// 駒画像番号、サウンドの有無、ウインドウ比率など…
     /// </summary>
-    public class GlobalConfig : NotifyObject
+    public partial class GlobalConfig : NotifyObject
     {
         #region publics
 
@@ -22,9 +22,15 @@ namespace MyShogi.App
         /// 『将棋神やねうら王』(2018年8月末発売)のマスターアップ版[2018/08/06]は"1.0.0"
         /// 『将棋神やねうら王』のUpdate1.3 は、"1.1.3"。→　マイナビ公式で配布[2018/09/03]
         /// 『将棋神やねうら王』のUpdate2   は、"1.2.4"。→　マイナビ公式で配布[2018/10/10]
+        ///
+        /// このバージョン文字列は、Serializer.VersionStringToInt()によって数値に変換できるものとする。
         /// </summary>
-        public static readonly string MYSHOGI_VERSION_STRING = "1.3.2";
+        public static readonly string MYSHOGI_VERSION_STRING = "1.3.3";
 
+        /// <summary>
+        /// このファイルがシリアライズされて保存された時のバージョン文字列
+        /// </summary>
+        public string Version { get; set; }
 
         public GlobalConfig()
         {
@@ -54,7 +60,12 @@ namespace MyShogi.App
 
             KifuWindowDisplayTotalTime = 0;
 
-            // -- 評価値
+            // 対局エフェクト
+
+            EnableGameGreetingEffect = 1;
+            EnablePieceTossEffect = 1;
+
+            // 評価値
 
             DisplayEvalJudgement = 1;
 
@@ -62,13 +73,13 @@ namespace MyShogi.App
 
             EnableSound = 1;
 
-            // -- 駒音
+            // 駒音
 
             PieceSoundInTheGame = 1;
             PieceSoundOffTheGame = 1;
             //CrashPieceSoundInTheGame = 1;
 
-            // -- 読み上げ
+            // 読み上げ
 
             ReadOutKifu = 1;
             ReadOutGreeting = 1;
@@ -76,16 +87,19 @@ namespace MyShogi.App
             ReadOutCancelWhenGameEnd = 1;
             ReadOutByoyomi = 1;
 
-            // -- 対局エフェクト
+            // -- 操作設定
 
-            EnableGameGreetingEffect = 1;
-            EnablePieceTossEffect = 1;
+            KifuWindowPrevNextKey = 1;
+            KifuWindowNextSpecialKey = 1;
+            KifuWindowFirstLastKey = 1;
+            ConsiderationWindowPrevNextKey = 1;
 
             // -- 検討設定
 
             //EngineConsiderationWindowEnableWhenVsHuman = true;
             //ConsiderationWindowFollowMainWindow = true;
             ConsiderationMultiPV = 5;
+
         }
 
         /// <summary>
@@ -98,6 +112,9 @@ namespace MyShogi.App
             // ファイルがなかったら新規に作成する。
             if (config == null)
                 config = new GlobalConfig();
+            else
+                // 以前のデータ構造からのマイグレーション
+                config.Migrate();
 
             config.Init();
 
@@ -154,6 +171,8 @@ namespace MyShogi.App
         /// </summary>
         public void Save()
         {
+            // 保存するときのバージョンを埋め込んでおく。
+            Version = MYSHOGI_VERSION_STRING;
             Serializer.Serialize(xmlFile, this);
         }
 
@@ -311,15 +330,28 @@ namespace MyShogi.App
         /// 棋譜ウィンドウに表示する棋譜の種類
         ///
         /// 0 : 標準(KI2形式) 「８八同金右」 ←　デフォルト
-        /// 1 : 簡易(KIF形式) 「88金(79)」
-        /// 2 : Csa式        「7988KI」
-        /// 3 : Chess式       「7i8h」
+        /// 1 : 打強制(KI2形式+打つ)「８八金打」
+        /// 2 : 簡易(KIF形式) 「88金(79)」
+        /// 3 : Csa式        「7988KI」
+        /// 4 : Chess式       「7i8h」
+        /// 
+        /// 打つは、紛らわしくないときは書かないのが正式。(KI2形式が正式)
+        /// cf.日本将棋連盟 「棋譜の表記方法」: https://www.shogi.or.jp/faq/kihuhyouki.html
+        /// しかし、書かないとわかりにくいと将棋初心者には不評。
         /// </summary>
         [DataMember]
         public int KifuWindowKifuVersion
         {
             get { return GetValue<int>("KifuWindowKifuVersion"); }
             set { SetValue<int>("KifuWindowKifuVersion", value); }
+        }
+
+        /// </summary>
+        [DataMember]
+        public int KifuWindowKifuDropVersion
+        {
+            get { return GetValue<int>("KifuWindowKifuDropVersion"); }
+            set { SetValue<int>("KifuWindowKifuDropVersion", value); }
         }
 
         /// <summary>
@@ -339,9 +371,10 @@ namespace MyShogi.App
         /// 検討ウィンドウの読み筋に表示する棋譜の種類
         ///
         /// 0 : 標準(KI2形式) 「８八同金右」 ←　デフォルト
-        /// 1 : 簡易(KIF形式) 「88金(79)」
-        /// 2 : Csa式        「7988KI」
-        /// 3 : Chess式       「7i8h」
+        /// 1 : 打強制(KI2形式+打つ)「８八金打」
+        /// 2 : 簡易(KIF形式) 「88金(79)」
+        /// 3 : Csa式        「7988KI」
+        /// 4 : Chess式       「7i8h」
         /// </summary>
         [DataMember]
         public int ConsiderationWindowKifuVersion
@@ -445,16 +478,6 @@ namespace MyShogi.App
         {
             get { return GetValue<int>("PickedMoveDisplayStyle"); }
             set { SetValue<int>("PickedMoveDisplayStyle", value); }
-        }
-
-        /// <summary>
-        /// 駒の移動にマウスドラッグを許容する。
-        /// </summary>
-        [DataMember]
-        public int EnableMouseDrag
-        {
-            get { return GetValue<int>("EnableMouseDrag"); }
-            set { SetValue<int>("EnableMouseDrag", value); }
         }
 
         /// <summary>
@@ -690,6 +713,86 @@ namespace MyShogi.App
             get { return GetValue<int>("ReadOutByoyomi"); }
             set { SetValue<int>("ReadOutByoyomi", value); }
         }
+
+        #endregion
+
+        #region Operation Setting
+
+        /// <summary>
+        /// 駒の移動にマウスドラッグを許容する。
+        /// </summary>
+        [DataMember]
+        public int EnableMouseDrag
+        {
+            get { return GetValue<int>("EnableMouseDrag"); }
+            set { SetValue<int>("EnableMouseDrag", value); }
+        }
+
+        /// <summary>
+        /// 棋譜ウインドウでのキー操作その1
+        ///
+        /// 1手進む/戻るキー
+        /// 0 : なし
+        /// 1 : ←と→  :  デフォルト
+        /// 2 : ↑と↓
+        /// </summary>
+        [DataMember]
+        public int KifuWindowPrevNextKey
+        {
+            get { return GetValue<int>("KifuWindowPrevNextKey"); }
+            set { SetValue<int>("KifuWindowPrevNextKey", value); }
+        }
+
+        /// <summary>
+        /// 棋譜ウインドウでのキー操作その2
+        ///
+        /// 次の1手に移動する特殊キー
+        /// 0 : なし
+        /// 1 : スペースキー : デフォルト
+        /// 2 : Enterキー
+        /// </summary>
+        [DataMember]
+        public int KifuWindowNextSpecialKey
+        {
+            get { return GetValue<int>("KifuWindowNextSpecialKey"); }
+            set { SetValue<int>("KifuWindowNextSpecialKey", value); }
+        }
+
+        /// <summary>
+        /// 棋譜ウインドウでのキー操作その3
+        ///
+        /// 最初に戻る/最後に進むキー
+        /// 0 : なし
+        /// 1 : ↑と↓  :  デフォルト
+        /// 2 : ←と→
+        /// 3 : PageUpとPageDown
+        /// </summary>
+        [DataMember]
+        public int KifuWindowFirstLastKey
+        {
+            get { return GetValue<int>("KifuWindowFirstLastKey"); }
+            set { SetValue<int>("KifuWindowFirstLastKey", value); }
+        }
+
+        /// <summary>
+        /// 検討ウインドウでのキー操作その1
+        ///
+        /// 選択行の上下移動
+        /// 0 : なし
+        /// 1 : Shift↑↓  : デフォルト
+        /// 2 : Shift←→
+        /// 3 : ，(カンマ)と ．(ピリオド)
+        /// 4 : ↑と↓ 
+        /// 5 : ←と→
+        /// 6 : PageUpとPageDown
+        /// </summary>
+        [DataMember]
+        public int ConsiderationWindowPrevNextKey
+        {
+            get { return GetValue<int>("ConsiderationWindowPrevNextKey"); }
+            set { SetValue<int>("ConsiderationWindowPrevNextKey", value); }
+        }
+
 
         #endregion
 
