@@ -569,7 +569,7 @@ namespace MyShogi.Model.Resource.Sounds
 
 					process.Start();
 
-                    if (filename.Substring(0, 4) != "koma")
+                    if (!filename.Contains("koma_"))
                     {
                         _playerProcess = process;
                     }
