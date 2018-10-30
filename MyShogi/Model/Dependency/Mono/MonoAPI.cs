@@ -553,7 +553,7 @@ namespace MyShogi.Model.Resource.Sounds
 					var info = new ProcessStartInfo
 					{
 						FileName = playerExeName,
-						Arguments = filename,
+						Arguments = "-N " + filename,
 
 						CreateNoWindow = true,
 						UseShellExecute = false,
