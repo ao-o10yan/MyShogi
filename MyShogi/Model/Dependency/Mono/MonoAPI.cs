@@ -553,11 +553,7 @@ namespace MyShogi.Model.Resource.Sounds
 					var info = new ProcessStartInfo
 					{
 						FileName = playerExeName,
-#if MACOS
 						Arguments = filename,
-#elif LINUX
-						Arguments = "-N " + filename,
-#endif
 
 						CreateNoWindow = true,
 						UseShellExecute = false,
@@ -573,7 +569,7 @@ namespace MyShogi.Model.Resource.Sounds
 
 					process.Start();
 
-                    if (!filename.Contains("koma_"))
+                    if (filename.Substring(filename.Length - 11, 5) != "koma_")
                     {
                         _playerProcess = process;
                     }
