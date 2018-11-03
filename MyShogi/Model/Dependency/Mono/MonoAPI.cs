@@ -81,7 +81,54 @@ namespace MyShogi.Model.Dependency
                 Log.Write(LogInfoType.SystemError, $"GetProcessorCores() , success = {success} , processor_cores = {processor_cores}");
                 processor_cores = 1;
             }
+#if LINUX
+			// Linuxのnprocでは論理コア数になるので、
+			// lscpuの"Thread(s) per core"で割った数を物理コア数とする。
 
+            var lscpu_info = new ProcessStartInfo
+            {
+                FileName = "lscpu",
+                Arguments = "",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = false,
+            };
+
+            var lscpu = new Process
+            {
+                StartInfo = lscpu_info,
+            };
+
+            lscpu.Start();
+
+            var res = lscpu.StandardOutput.ReadToEnd();
+			//Console.WriteLine("res = {0}", res);
+
+			var thread_num = 0;
+            var rows = res.Split('\n');
+			for (int i = 0; i < rows.Length; i++)
+			{
+				var row = rows[i];
+
+				var data = row.Split(':');
+				if (data.Length != 2) continue;
+
+				var key = data[0].Trim();
+				var value = data[1].Trim();
+				if (key == "Thread(s) per core" || key == "コアあたりのスレッド数")
+				{
+					thread_num = int.Parse(value);
+					Console.WriteLine("thread_num = {0}", thread_num);
+				}
+			}
+			if (thread_num > 0)
+			{
+				processor_cores = processor_cores / thread_num;
+			}
+#endif
+			Console.WriteLine("processor_cores = {0}", processor_cores);
             return processor_cores;
         }
 
@@ -124,7 +171,12 @@ namespace MyShogi.Model.Dependency
 #endif
 
                 CpuType c;
-                if (result.Contains("AVX512"))
+				if (!Environment.Is64BitOperatingSystem)
+					if (result.Contains("SSE2"))
+						c = CpuType.SSE2;
+					else
+						c = CpuType.NO_SSE;
+                else if (result.Contains("AVX512"))
                     c = CpuType.AVX512;
 
                 else if (result.Contains("AVX2"))
@@ -532,7 +584,7 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
-				Console.WriteLine("playerExeName = {0}", playerExeName);
+				//Console.WriteLine("playerExeName = {0}", playerExeName);
 				if (playerExeName == "SoundPlayer")
 				{
 	                if (_playerProcess == null || _playerProcess.HasExited)
@@ -549,7 +601,7 @@ namespace MyShogi.Model.Resource.Sounds
                 if (playerExeName == "aplay")
 #endif
                 {
-                    Console.WriteLine("wav = {0}", filename);
+                    //Console.WriteLine("wav = {0}", filename);
 					var info = new ProcessStartInfo
 					{
 						FileName = playerExeName,
