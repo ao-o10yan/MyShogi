@@ -171,12 +171,7 @@ namespace MyShogi.Model.Dependency
 #endif
 
                 CpuType c;
-				if (!Environment.Is64BitOperatingSystem)
-					if (result.Contains("SSE2"))
-						c = CpuType.SSE2;
-					else
-						c = CpuType.NO_SSE;
-                else if (result.Contains("AVX512"))
+                if (result.Contains("AVX512"))
                     c = CpuType.AVX512;
 
                 else if (result.Contains("AVX2"))
