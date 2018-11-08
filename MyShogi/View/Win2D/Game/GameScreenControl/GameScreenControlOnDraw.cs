@@ -70,7 +70,7 @@ namespace MyShogi.View.Win2D
                     // 移動元の升に適用されるエフェクトを描画する。
                     DrawSprite(dest, SPRITE.PieceMove(PieceMoveEffect.PickedFrom));
 
-                    switch (config.PickedMoveDisplayStyle)
+                    switch (config.EnableMouseDrag)
                     {
                         case 0:
                             // 少し持ち上げた感じで描画する。
