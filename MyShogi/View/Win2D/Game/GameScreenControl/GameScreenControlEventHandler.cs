@@ -36,10 +36,13 @@ namespace MyShogi.View.Win2D
         {
             if (e.Button == MouseButtons.Left)
             {
+                TheApp.app.Config.EnableMouseDrag = 1;
+
                 mouseLastDown = e.Location;
 
                 // この時点でクリックイベントとして扱って良いのでは…。
-                OnClick(e.Location);
+                //OnClick(e.Location);
+                OnDrag(mouseLastDown, e.Location);
             }
             else if (e.Button == MouseButtons.Right)
             {
@@ -60,20 +63,25 @@ namespace MyShogi.View.Win2D
 
             if (e.Button == MouseButtons.Left)
             {
-#if false
+                //#if false
                 // 移動がないので、これはクリックイベントとして扱う
-                if (mouseLastDown == p)
-                    OnClick(p);
-                else
-                    OnDrag(mouseLastDown, p);
-#endif
-
-                if (mouseLastDown != p)
+                //if (mouseLastDown == p)
+                if (p.X < mouseLastDown.X + 5 && p.X > mouseLastDown.X - 5 && p.Y < mouseLastDown.Y + 5 && p.Y > mouseLastDown.Y - 5)
                 {
-                    OnClick(p , true /* dragged */); // 2点クリックされたかのように扱う
+                    TheApp.app.Config.EnableMouseDrag = 0;
+                    OnClick(p, true);
+                }
+                else
+                {
+                    OnDrag(mouseLastDown, p);
+                }
+//#endif
+                //if (mouseLastDown != p)
+                //{
+                    //OnClick(p, true /* dragged */); // 2点クリックされたかのように扱う
                     // ただし、ここに駒を移動できないときに、そこにある駒を掴み直すのはユーザーの意図しない挙動である
                     // 可能性が高いので、それは行わない。
-                }
+                //}
             }
             else if (e.Button == MouseButtons.Right)
             {

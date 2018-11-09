@@ -1174,7 +1174,7 @@ namespace MyShogi.View.Win2D
 
         // Drag処理、不評。単にD&Dの始点・終点の2点がクリックされたかのように扱うほうが適切であるようだ。
 
-#if false
+//#if false
         /// <summary>
         /// 盤面がドラッグされたときに呼び出されるハンドラ
         /// </summary>
@@ -1204,7 +1204,7 @@ namespace MyShogi.View.Win2D
                 // 通常の移動であるが、これが駒の移動の条件を満たすことを確認しなければならない。
 
                 // p1がクリックされたあとにp2がクリックされたことにしてお茶を濁す
-                OnClick(p1);
+                //OnClick(p1);
                 OnClick(p2);
 
                 // 簡単なhackだが、これでだいたい意図通りの動作になるようだ。
@@ -1213,7 +1213,7 @@ namespace MyShogi.View.Win2D
             // デバッグ用にドラッグされた升の名前を出力する。
             //Console.WriteLine(sq1.Pretty() + '→' + sq2.Pretty());
         }
-#endif
+//#endif
 
         /// <summary>
         /// マウスが移動したときに呼び出されるハンドラ
@@ -1250,12 +1250,12 @@ namespace MyShogi.View.Win2D
                 MouseClientLocation = pt;
                 MouseClientLocationReverse = reverse; // この保存されたときにreverseであったかも併せて保存しておく。
 
-                if (state.state == GameScreenControlViewStateEnum.PiecePickedUp && TheApp.app.Config.PickedMoveDisplayStyle == 1)
+                if (state.state == GameScreenControlViewStateEnum.PiecePickedUp)
                 {
 
-                    // 駒をマウスカーソルに追随させるモードである
-                    // マウスカーソルが移動しているので、このとき再描画が必要になる。
-                    Dirty = true;
+                        // 駒をマウスカーソルに追随させるモードである
+                        // マウスカーソルが移動しているので、このとき再描画が必要になる。
+                        Dirty = true;
                 }
             }
         }
