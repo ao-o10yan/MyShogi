@@ -70,18 +70,29 @@ namespace MyShogi.View.Win2D
                     // 移動元の升に適用されるエフェクトを描画する。
                     DrawSprite(dest, SPRITE.PieceMove(PieceMoveEffect.PickedFrom));
 
-                    switch (config.PickedMoveDisplayStyle)
+                    if (TheApp.app.Config.EnableMouseDrag == 0)
                     {
-                        case 0:
-                            // 少し持ち上げた感じで描画する。
-                            picked_sprite = new SpriteEx(sprite, dest + new Size(-5, -20));
-                            break;
+                        switch (config.PickedMoveDisplayStyle)
 
-                        case 1:
-                            // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
-                            picked_sprite = new SpriteEx(sprite, MouseClientLocation
-                                + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
-                            break;
+                        {
+                            case 0:
+                                // 少し持ち上げた感じで描画する。
+                                picked_sprite = new SpriteEx(sprite, dest + new Size(-5, -20));
+                                break;
+
+                            case 1:
+                                // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
+                                picked_sprite = new SpriteEx(sprite, MouseClientLocation
+                                    + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
+                        picked_sprite = new SpriteEx(sprite, MouseClientLocation
+                            + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
+
                     }
                 });
 
