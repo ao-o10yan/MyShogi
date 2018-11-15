@@ -41,6 +41,13 @@ namespace MyShogi.View.Win2D.Setting
             // -- 「検討」のタブ
 
             richSelector5.Bind(config, "ConsiderationWindowPrevNextKey");
+            richSelector7.Bind(config, "ConsiderationWindowHeadTailKey");
+            richSelector6.Bind(config, "ConsiderationPvSendKey");
+
+            // -- 「ミニ盤面」のタブ
+
+            richSelector9.Bind(config, "MiniBoardPrevNextKey");
+            richSelector8.Bind(config, "MiniBoardHeadTailKey");
 
         }
 

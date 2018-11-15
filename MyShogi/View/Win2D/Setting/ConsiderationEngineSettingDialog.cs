@@ -127,6 +127,31 @@ namespace MyShogi.View.Win2D.Setting
                     }
 
                     pictureBox1.Image = banner_mini.image;
+
+                    // 詰将棋エンジンなら、nodes , depthを指定できるかは、USI2.0拡張で拡張されていない限りむりぽ。
+
+                    if (ViewModel.DialogType == ConsiderationEngineSettingDialogType.MateSetting)
+                    {
+                        // USIプロトコルではgo mateのあと時間[ms]を指定するようになっている。
+                        // 現状、プロトコル的に対応不可能であるな。
+                        // go mate "nodes"
+                        // go mate "depth"
+                        // のような拡張を受け付けるようにする。
+
+                        var nodes_enable = engine_define.SupportedExtendedProtocol.Contains(ExtendedProtocol.GoMateNodesExtension);
+                        var depth_enable = engine_define.SupportedExtendedProtocol.Contains(ExtendedProtocol.GoMateDepthExtension);
+
+                        radioButton3.Enabled = nodes_enable;
+                        radioButton4.Enabled = depth_enable;
+
+                        // 上で無効化したRadioButtonが選択されている可能性がある。
+                        // その場合、radioButton1を選択しなおす。
+
+                        if ((!radioButton3.Enabled && radioButton3.Checked) ||
+                            (!radioButton4.Enabled && radioButton4.Checked))
+                            radioButton1.Checked = true;
+                    }
+
                 }
             });
 
@@ -235,9 +260,17 @@ namespace MyShogi.View.Win2D.Setting
             }
 
             binder.Bind(setting, "PlayerName" , textBox1);
+
             binder.Bind(setting, "Limitless"  , radioButton1);
+
             binder.Bind(setting, "TimeLimitEnable" , radioButton2);
             binder.Bind(setting, "Second", numericUpDown1 );
+
+            binder.Bind(setting, "NodesLimitEnable", radioButton3);
+            binder.Bind64(setting, "Nodes", numericUpDown2);
+
+            binder.Bind(setting, "DepthLimitEnable", radioButton4);
+            binder.Bind(setting, "Depth", numericUpDown3);
 
             ViewModel.EngineDefineFolderPath = setting.EngineDefineFolderPath;
         }
