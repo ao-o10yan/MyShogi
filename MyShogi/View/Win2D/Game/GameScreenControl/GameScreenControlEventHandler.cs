@@ -72,10 +72,6 @@ namespace MyShogi.View.Win2D
                     OnClick(p, true);
                 }
                 else
-                    OnDrag(mouseLastDown, p);
-#endif
-
-                if (mouseLastDown != p)
                 {
                     OnDrag(mouseLastDown, p);
                 }
