@@ -17,33 +17,59 @@ namespace MyShogi.View.Win2D
         /// <summary>
         /// サブウインドウ側のKeyDownで、ショートカットキーを処理しない場合に、
         /// このハンドラを呼び出すと事前に登録されていたdelegateが呼び出される。
+        ///
+        /// 全Controlでショートカットをglobalに設定したいわけで、senderは不要。
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public void KeyDown(object sender, KeyEventArgs e)
+        public void KeyDown(KeyEventArgs e)
         {
-            try
-            {
-                var list = new[] { OnKeyDown1, OnKeyDown2 };
-                foreach (var onKeyList in list)
-                    foreach (var onKey in onKeyList)
-                    {
-                        onKey.Invoke(sender, e);
+            KeyDownPrivate(e);
 
-                        // キーイベントが処理されたなら、そこで終了
-                        if (e.Handled)
-                            return;
-                    }
+            // これをしておかないとキーがこのあとListViewなどによって処理されてしまう。
+            // 特にSpaceキーだとListViewはFocusのある場所(これは現在の選択行とは異なる)に移動してしまう。
+            // この動作をキャンセルさせる必要がある。
+            e.SuppressKeyPress = true;
 
-                // 上記以外のキーは処理しない。
-                e.Handled = true;
-            } finally
-            {
-                // これをしておかないとキーがこのあとListViewなどによって処理されてしまう。
-                // 特にSpaceキーだとListViewはFocusのある場所(これは現在の選択行とは異なる)に移動してしまう。
-                // この動作をキャンセルさせる必要がある。
-                e.SuppressKeyPress = true;
-            }
+            // ハンドルされなかった場合も、これ以上キーイベントを下位のControlでされると困るので
+            // 処理済みとして扱う。
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// KeyDown()の下請け
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void KeyDownPrivate(KeyEventArgs e)
+        {
+            var list = new[] { OnKeyDown1, OnKeyDown2 };
+            foreach (var onKeyList in list)
+                foreach (var onKey in onKeyList)
+                {
+                    onKey.Invoke(e);
+
+                    // キーイベントが処理されたなら、そこで終了
+                    if (e.Handled)
+                        return;
+                }
+        }
+
+        /// <summary>
+        /// カーソルキー入力がControlに食われてしまうのでその回避策
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="keyData"></param>
+        /// <returns></returns>
+        public bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+//         if (msg.Msg == WM_KEYDOWN || msg.Msg == WM_SYSKEYDOWN) ...
+
+
+            var e = new KeyEventArgs(keyData);
+            KeyDownPrivate(e);
+
+            return e.Handled;
         }
 
         /// <summary>
@@ -66,7 +92,7 @@ namespace MyShogi.View.Win2D
         /// イベントリストその1にキーイベントを追加
         /// </summary>
         /// <param name="action"></param>
-        public void AddEvent1(Action<object, KeyEventArgs> action)
+        public void AddEvent1(Action<KeyEventArgs> action)
         {
             OnKeyDown1.Add(action);
         }
@@ -75,7 +101,7 @@ namespace MyShogi.View.Win2D
         /// イベントリストその2にキーイベントを追加
         /// </summary>
         /// <param name="action"></param>
-        public void AddEvent2(Action<object, KeyEventArgs> action)
+        public void AddEvent2(Action<KeyEventArgs> action)
         {
             OnKeyDown2.Add(action);
         }
@@ -84,13 +110,13 @@ namespace MyShogi.View.Win2D
         /// イベントリストその1
         /// メニューのアイテムのclickイベントを生起するためのショートカットキーハンドラ
         /// </summary>
-        private List<Action<object, KeyEventArgs>> OnKeyDown1 = new List<Action<object, KeyEventArgs>>();
+        private List<Action<KeyEventArgs>> OnKeyDown1 = new List<Action<KeyEventArgs>>();
 
         /// <summary>
         /// イベントリストその2
         /// メインウインドウにぶら下がっているToolStripのボタンのclickイベントを生起するためのショートカットハンドラ
         /// </summary>
-        private List<Action<object, KeyEventArgs>> OnKeyDown2 = new List<Action<object, KeyEventArgs>>();
+        private List<Action<KeyEventArgs>> OnKeyDown2 = new List<Action<KeyEventArgs>>();
 
     }
 }

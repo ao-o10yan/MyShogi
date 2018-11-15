@@ -1,13 +1,321 @@
 ﻿
-- 検討ウインドウの現在選択されている読み筋に対して「再クリック」もしくは「スペースキー」で再度ミニ盤面にその読み筋が反映されて欲しい。
-
 - 検討ウインドウの読み筋の右クリックメニューを追加。その2。
   - 棋譜ウインドウと検討ウインドウは読み筋をちゃんとList<Move>として保持すべきなのでは…。
   - 棋譜の記法が即時反映でないのは設計が悪いからだと思う。リファクタリングすべき。
 
 
-■  2018/10/29
 
+■  2018/11/12
+
+
+- 詰検討ダイアログで探索ノード数を制限できるように。
+  - tanuki-詰将棋エンジンをノード制限に対応
+  - USI2.0プロトコルとしてnodesを有効に。
+
+    isready
+    position startpos
+    go nodes 10000 mate infinite
+
+  - あれ？一回落ちた。メモリ確保失敗なのか？あれあれ？
+    - わからん。落ちない。メモリ確保失敗でエンジン落ちるのかな…。callocだからか。
+    - オプション指定間違えたほうのスレッドが残っていたのかな…。うむむ…。
+
+usi
+setoption name Threads value 2
+setoption name Hash value 128
+setoption name WriteDebugLog value false
+setoption name NetworkDelay value 350
+setoption name NetworkDelay2 value 550
+setoption name MinimumThinkingTime value 2000
+setoption name SlowMover value 100
+setoption name MaxMovesToDraw value 0
+setoption name DepthLimit value 0
+setoption name NodesLimit value 0
+setoption name Contempt value 2
+setoption name ContemptFromBlack value false
+setoption name EvalDir value eval
+setoption name MorePreciseMatePv value true
+isready
+usinewgame
+position startpos
+go nodes 10000 mate infinite
+
+quit
+
+- ミニ盤面のフロート処理その4
+- MiniShogiBoardのfont設定忘れていたの修正。
+- 棋譜ウインドウ、検討ウインドウのメインウインドウへの埋込み時の幅、高さを変更したときに
+  メニュー項目が更新されていなかったの修正。
+- 対局結果一覧ウインドウがメインウインドウに対してセンタリングされていかなったの修正。
+- メニューの「対局結果一覧」をウインドウのところから「対局」の配下に移動。
+- ファイルへのロギング、ウインドウ配下でええんか？ここしかないのか…。
+
+- メインウインドウに埋め込み時に畳の左端に表示するモードを追加(kumaさん)
+  - ウインドウレイアウトマネージャーを作るべきか？
+  - 単に配置設定を追加して、メインウインドウを左寄せで表示できればいいだけなのでは。
+  あとはフロートさせれば一応好みの配置にできるっしょ。
+  - いやー、それならもともと全部フロートで配置すればいいのか…。
+    - あかん。もっとよく練り直そう。
+  - メインウインドウも何とかできたほうが良さそうだけど、これ大変っぽいな。今回はここまでにしておこう。
+
+- エンジン補助設定を対局のところに移動させたほうが良いのでは…。
+  - いやー、基本、使わない設定だしなぁ…。うーむ..。
+  - 1手X秒で指すというの、対局補助設定に移動させるか？
+
+
+■  2018/11/11
+
+
+- ミニ盤面のフロート処理その3
+  - ミニ盤面フロートさせていると、メインウインドウのリサイズで、ミニ盤面の再描画イベントが走っているような…？
+    - MiniShogiBoardのDoubleBuffer = trueにしたらちらつかなくなったが…。
+      Resize,Moveは来てないのにな…。親WindowのResizeに対して子のredrawが走るのはWindowsの仕様なのでは…。
+  - 棋譜ウインドウをフロートしているときにMiniShogiBoard広げると棋譜ウインドウ出てこない。
+    これ、GameSceneControlがMainWindowに埋まっているかどうかのフラグが必要なのでは…。
+    - 修正した。これは問題なさげ。
+  - MiniShogiBoardにボタン追加するわ。左上にしとかないとDockさせたときに気持ち悪いな…。
+    - 閉じるボタンが要らないかな。
+        // →　メニューのウインドウのところから非表示にすればいいのでこれ要らないや。
+  - ネームプレートオフにしてるのにMiniShogiBoardで出てくるのなんで…未実装なのか…。
+    - ネームプレート合成後なので、ネームプレートの名前だけの問題なのか…そうか…。
+    - あとで考えるとする。
+    
+
+- ミニ盤面のフロート処理その2
+  - メインウインドウに埋め込んだときに表示されなかったの修正。
+  - フロートさせたとき、棋譜ウインドウがあるからボタン要らないような気がしてきた…。
+  - いやー、ショートカットキー欲しいか…。これ、メニューからOn/Offできるようにするか…。
+  - 対局者氏名、ミニ盤面に入っていないの修正するか？いやー、これわりと面倒くさいな…。
+  - ミニ盤面フロートさせていると、メインウインドウのリサイズで、ミニ盤面の再描画イベントが走っているような…？
+
+
+- ミニ盤面のフロート処理その1
+  - 半分ぐらい書けた。MiniShogiBoardのボタン、ToolStripにして上につけたほうがいいか。
+  - 非表示→表示がまだ。
+ 
+
+- 設定→エンジン補助設定追加。
+- エンジンのタイムアウト時のメッセージに設定→エンジン補助設定から設定するように追記。
+- ダイアログのStartPosition、WindowsDefaultLocationからぜんぶManualに変更。(メインウインドウに対してセンタリングするので)
+- SystemInfo →　SystemInfoDialogにrename
+- メニュー→設定→エンジン初期化にショートカットキー追加。
+
+
+■  2018/11/10
+
+
+- isreadyのあとのKeep Aliveの処理、うまくいっていない？(AO_o10yanさん)
+  - 処理はちゃんと書けているようだが、評価関数ファイルの読み込みでDMA転送とかで、単coreのCPUだとCPU時間自体がもらえない可能性も…。
+    設定で変更できたほうが良いのか…。うーむ..。
+- エンジン補助設定、みたいなの追加して変更できるようにするべきか…。
+- "usi"に対するtime outと、"isready"に対するtime outとを分ける。
+
+
+■  2018/11/09
+
+
+- jnoryさんのSoundPlayer、Linuxでの音が途切れる問題に対処するためにCで書き直し。
+    https://github.com/jnory/MyShogiSoundPlayer/releases/tag/0.2.0  [2018/11/09 19:10]
+
+
+- V1.3.5リリース。
+  - eval : MyShogi201807260000Eval.zip
+  - 本体 : MyShogi201811090500V135.zip
+- "1.3.3"→"1.3.4" [2018/11/07]-[2018/11/08]
+- 連続対局のバグがひどかったので早めにリリースしておく。
+
+
+- tanuki-詰将棋エンジン側、nodes指定ぐらいは対応できないものだろうか…。
+  - USIプロトコル的に非対応なのか。そうか…。なら仕方がないな。
+
+- 検討設定にnode数、深さの指定追加。
+  - 棋力プリセットが選べても良さそうなものだが、それはわりと難しい…。
+  - node数、depthの指定、詰将棋エンジン、対応してない。禿げそう。エンジン側を対応させるのはあとにしよう…。
+  - とりあえず、詰将棋エンジンなら選択できないようにしておく。
+- 検討設定に定跡を使う、使わない → あー、これは検討用のエンジンの共通設定でできるから不要なのか…。
+
+
+- 連続対局で対局開始時に不正な局面になる。(masaさん)
+  - Shogi960絡みでリファクタリングしたときに壊してしまっている。
+- あー、連続対局のときにGameOver→"isready"→"readyok"→対局開始なのに、この"readyok"待たずに
+  "go"コマンドを送信していて、この部分をちゃんと状態管理するようにしたから、この"go"で弾かれているのか…。
+  これは厄介な…。
+- エンジンのタイムアウト処理、きちんと判定できていなかったの修正。
+
+
+■  2018/11/08
+
+
+- エンジン側、Hashメモリのゼロクリア、2GBごとに進捗を読み筋のところに出力するように変更。
+  - エンジンまた全部差し替え(´ω｀)
+
+
+- V1.3.4リリース。
+  - eval : MyShogi201807260000Eval.zip
+  - 本体 : MyShogi201811080430V134.zip
+- "1.3.3"→"1.3.4" [2018/11/07]-[2018/11/08]
+
+
+- 検討・詰検討が終わったタイミングで何らかの通知が欲しい。(5ch 将棋スレ144 >> 300)
+  - エンジン動作中は、エンジン名の背景色を変更。
+    - readonlyのTextBox、背景色変更できないのかｗ
+    - 文字色を濃いオレンジに。
+  - 時間設定なしの思考だとbestmove返ってこないから定跡でも停止してることがわからないなｗ
+    - うむむ..まあいいか..
+
+
+- Shogi960、平手の将棋と同じ形を除外できてるか？
+  - できてた。
+
+- tanuki-詰将棋エンジン、Hash確保を"isready"に対して行うように変更。
+  - これでエンジン初期化中のダイアログが表示されるようになった。
+  - でもゼロクリアしてないので、初期化に要する時間はわずか…。
+- mate engine、Hashの初期化をisreadyokやっていないの修正。
+
+
+- 評価値、後手から見た値になってなくない？なんぞこれ。
+  - ああ、自分側から見た評価値だと検討で1手ごとに符号反転するのか。これわかりにくいなｗ
+  - 先手から見た評価値をデフォルトとするように変更する。
+
+
+■  2018/11/07
+
+
+- UsiState拡張して、WaitReadyOkなどを用意する。
+- Hashの値が超巨大だとtime outになる。(5ch 将棋スレ >> 158)
+  - 30秒をtime out時間として、それを超えるならkeep aliveのためにエンジン側から何らかのメッセージ(改行可)を送らないといけないことにする。
+  - エンジン側を修正する。
+- Hashの初期化メッセージの件、オンラインマニュアルに追記しておく。
+- 駒をクリックして持ち上げている状態で、検討ボタンを押して、エンジン初期化中に駒を移動完了させるとエンジンが例外で停止していたの修正。
+
+
+- エンジン側に不成を生成するオプションを追加する。
+  - GenerateAllLegalMoves
+    - オプション名、ちょっと長いか？まあいいか。
+  - 指し手生成、足りないのがあるのか。これは大変だわ。
+- 思考エンジンが敵陣の歩の不成などを読むかどうかのエンジンオプションが欲しい。(ｋ＆ｙさん)
+  - GenerateAllLegalMoves オプション追加。
+  - これに伴い、engine_define.xml更新。
+
+
+- バージョン情報ウインドウに最小化、最大化、要らない。(5ch 将棋スレ144 >> 300)
+  - MinimizeBox , MaximizeBoxをfalseに。
+
+
+- 対局設定、Shogi960が初期設定になっていたの修正。(ohtaroさん)
+  - 同じTabIndexになっているとこうなるのか。なんぞこれ。
+  - RadioButton、ひどすぎるんちゃうか、このバグ。
+  - RadioButton同じTabIndexになってて、しかも、このGroupBoxに最初にfocusが来るから、ここでclick event生起してたのか。
+  - 対局設定ダイアログのTabIndex設定しなおした。
+
+
+■  2018/11/06
+
+
+- V1.3.3リリース。
+  - eval : MyShogi201807260000Eval.zip
+  - 本体 : MyShogi201811062030V133.zip
+- "1.3.2"→"1.3.3" [2018/10/27]-[2018/11/06]
+
+
+- Shogi960実装
+
+
+- ミニ盤面のショートカットキーの追加 Ctrl+上下左右
+  Control+左右にしようと思ったら、これ、デフォルトだとToolStripの移動キーに割り当たってるな…。変更するか。
+- ミニ盤面のショートカットキーの追加 デフォルト、Ctrl+上下左右。
+  - 操作設定に「ミニ盤面」のタブ追加。
+- 操作設定の棋譜の左右キーの画像の順番、変更する。ほかも。
+
+
+なし,mini_prevnextkey_0.png,なし
+Ctrl←→,mini_prevnextkey_1.png,Ctrl+カーソルキーの左と右に割当てます。
+Ctrl↑↓,mini_prevnextkey_2.png,Ctrl+カーソルキーの上と下に割当てます。
+←と→,mini_prevnextkey_3.png,カーソルキーの左と右に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+↑と↓,mini_prevnextkey_4.png,カーソルキーの上と下に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+，と ．,mini_prevnextkey_5.png,  ，(カンマ)と ．(ピリオド)に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+Page,cons_prevnextkey_6.png,PageUpとPageDownに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+なし,mini_headtailkey_0.png,なし
+Ctrl←→,mini_headtailkey_1.png,Ctrl+カーソルキーの左と右に割当てます。
+Ctrl↑↓,mini_headtailkey_2.png,Ctrl+カーソルキーの上と下に割当てます。
+←と→,mini_headtailkey_3.png,カーソルキーの左と右に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+↑と↓,mini_headtailkey_4.png,カーソルキーの上と下に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+，と ．,mini_headtailkey_5.png,  ，(カンマ)と ．(ピリオド)に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+Page,mini_headtailkey_6.png,PageUpとPageDownに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+
+なし,cons_prevnextkey_0.png,なし
+Shift←→,cons_prevnextkey_1.png,Shift+カーソルキーの左と右に割当てます。
+Shift↑↓,cons_prevnextkey_2.png,Shift+カーソルキーの上と下に割当てます。
+←と→,cons_prevnextkey_3.png,カーソルキーの左と右に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+↑と↓,cons_prevnextkey_4.png,カーソルキーの上と下に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+，と ．,cons_prevnextkey_5.png,  ，(カンマ)と ．(ピリオド)に割当てます。
+Page,cons_prevnextkey_6.png,PageUpとPageDownに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+
+なし,cons_headtailkey_0.png,なし
+Shift←→,cons_headtailkey_1.png,Shift+カーソルキーの左と右に割当てます。
+Shift↑↓,cons_headtailkey_2.png,Shift+カーソルキーの上と下に割当てます。
+←と→,cons_headtailkey_3.png,カーソルキーの左と右に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+↑と↓,cons_headtailkey_4.png,カーソルキーの上と下に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+，と ．,cons_headtailkey_5.png,  ，(カンマ)と ．(ピリオド)に割当てます。
+Page,cons_headtailkey_6.png,PageUpとPageDownに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+
+- 検討ウインドウのショートカット、デフォルトでShift左右に変更。Shift上下で先頭/末尾に移動するように。
+- MainDialogのコードをいくつかのファイルに分離。
+-
+検討ウインドウで選択行の先頭/末尾移動
+ConsiderationWindowHeadTailKey
+
+なし,cons_headtailkey_0.png,なし
+Shift←→,cons_headtailkey_1.png,Shift+カーソルキーの左と右に割当てます。
+Shift↑↓,cons_headtailkey_2.png,Shift+カーソルキーの上と下に割当てます。
+，と ．,cons_headtailkey_3.png,  ，(カンマ)と ．(ピリオド)に割当てます。
+↑と↓,cons_headtailkey_4.png,カーソルキーの上と下に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+←と→,cons_headtailkey_5.png,カーソルキーの左と右に割当てます。棋譜操作のキーと重複している場合、無効化されます。
+Page,cons_headtailkey_6.png,PageUpとPageDownに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+
+
+
+■  2018/11/05
+
+
+- 検討ウインドウの現在選択されている読み筋に対して「再クリック」もしくは「スペースキー」で再度ミニ盤面にその読み筋が反映されて欲しい。
+  - デフォルトではEnterキーに設定。
+  - 操作設定のところに追加。
+- KeyboardShortcutHelper、リファクタリング
+-
+ConsiderationPvSendKey
+検討ウインドウで選択行をミニ盤面に反映させるキー
+なし,cons_sendpv_key_0.png,なし。
+Enter,cons_sendpv_key_1.png,Enterキーに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+スペース,cons_sendpv_key_2.png,スペースキーに割当てます。棋譜操作のキーと重複している場合、無効化されます。
+
+
+- 検討ウインドウの「+-」の列幅記憶したものが次回反映していなかったの修正。(キメラさん)
+
+
+- 棋譜ウインドウをフロートさせているときにショートカットキーがときどき利かなくなる問題を修正。
+  - どうもメインウインドウをクリックしたときにGameScreenか何かにfocusを奪われて、KeyDownイベントが生起しないようだ。
+  - 棋譜ウインドウをフロートさせて、検討ウインドウをクリックしたあと、メインウインドウをクリックするとこの現象が起きる。なんぞこれ。
+  - ああ、DockWindowで処理しているから、検討ウインドウをメインウインドウに埋め込んでいるときはKeyDownの処理がなされないのか。そうか。
+  - mainWindow.KeyPreview = trueにしてるのにMainWindowにイベントこないのなんで…？(´ω｀)
+  - AddControl(engineConsiderationMainControl)してるのに…。これ.NETのバグくさいな…。
+  - いやー、EngineConsiderationMainControlでKeyDownでもキーイベント拾えない。何この現象。
+  - MainWindowでクリックするとKeyDownこなくなる。なんぞこれ…。
+  - 検討ウインドウをクリック→盤面をクリック→「←」キーを押すで、ここ以降キーが利かない。「→」キーなら問題ない。なんぞこれ。
+  - カーソルの受け取れない変なコントロールにfocusが移動するためではなかろうか。
+  - cf. https://stackoverflow.com/questions/1646998/up-down-left-and-right-arrow-keys-do-not-trigger-keydown-event
+  - 結論的にはProcessCmdKey()使えってことなのか…。
+- 検討ウインドウのreadonlyのテキストボックス、tab stopをオフにする。
+  - 変なところにtab stopがあるとややこしくなる。どうせカーソルキーでComboBoxの項目の選択ができるわけではないのだから(ショートカットキーに割当てている)、
+  tab stop全部オフにする。
+
+
+■  2018/10/29
 
 
 - SoundLoader説明文、追加。

@@ -25,7 +25,7 @@ namespace MyShogi.App
         ///
         /// このバージョン文字列は、Serializer.VersionStringToInt()によって数値に変換できるものとする。
         /// </summary>
-        public static readonly string MYSHOGI_VERSION_STRING = "1.3.3";
+        public static readonly string MYSHOGI_VERSION_STRING = "1.3.6";
 
         /// <summary>
         /// このファイルがシリアライズされて保存された時のバージョン文字列
@@ -67,6 +67,7 @@ namespace MyShogi.App
 
             // 評価値
 
+            NegateEvalWhenWhite = true;
             DisplayEvalJudgement = 1;
 
             // -- 音声設定
@@ -87,18 +88,31 @@ namespace MyShogi.App
             ReadOutCancelWhenGameEnd = 1;
             ReadOutByoyomi = 1;
 
+
             // -- 操作設定
 
             KifuWindowPrevNextKey = 1;
+            KifuWindowFirstLastKey = 2;
             KifuWindowNextSpecialKey = 1;
-            KifuWindowFirstLastKey = 1;
+
             ConsiderationWindowPrevNextKey = 1;
+            ConsiderationWindowHeadTailKey = 2;
+            ConsiderationPvSendKey = 2;
+
+            MiniBoardPrevNextKey = 1;
+            MiniBoardHeadTailKey = 2;
+
 
             // -- 検討設定
 
             //EngineConsiderationWindowEnableWhenVsHuman = true;
             //ConsiderationWindowFollowMainWindow = true;
             ConsiderationMultiPV = 5;
+
+            // -- エンジン補助設定
+
+            UsiOkTimeOut = 15;
+            ReadyOkTimeOut = 30;
 
         }
 
@@ -514,7 +528,7 @@ namespace MyShogi.App
 
         /// <summary>
         /// 検討ウィンドウで思考エンジンが後手番のときに評価値を反転させるか(先手から見た評価値にするか)のフラグ
-        /// デフォルト : false
+        /// デフォルト : true (V1.34から)
         /// </summary>
         [DataMember]
         public bool NegateEvalWhenWhite
@@ -763,8 +777,8 @@ namespace MyShogi.App
         ///
         /// 最初に戻る/最後に進むキー
         /// 0 : なし
-        /// 1 : ↑と↓  :  デフォルト
-        /// 2 : ←と→
+        /// 1 : ←と→
+        /// 2 : ↑と↓  :  デフォルト
         /// 3 : PageUpとPageDown
         /// </summary>
         [DataMember]
@@ -779,11 +793,11 @@ namespace MyShogi.App
         ///
         /// 選択行の上下移動
         /// 0 : なし
-        /// 1 : Shift↑↓  : デフォルト
-        /// 2 : Shift←→
-        /// 3 : ，(カンマ)と ．(ピリオド)
+        /// 1 : Shift←→  : デフォルト
+        /// 2 : Shift↑↓
+        /// 3 : ←と→
         /// 4 : ↑と↓ 
-        /// 5 : ←と→
+        /// 5 : ，(カンマ)と ．(ピリオド)
         /// 6 : PageUpとPageDown
         /// </summary>
         [DataMember]
@@ -793,6 +807,77 @@ namespace MyShogi.App
             set { SetValue<int>("ConsiderationWindowPrevNextKey", value); }
         }
 
+        /// <summary>
+        /// 検討ウインドウでのキー操作その2
+        ///
+        /// 選択行の先頭/末尾移動
+        /// 0 : なし
+        /// 1 : Shift←→
+        /// 2 : Shift↑↓ : デフォルト 
+        /// 3 : ←と→
+        /// 4 : ↑と↓ 
+        /// 5 : ，(カンマ)と ．(ピリオド)
+        /// 6 : PageUpとPageDown
+        /// </summary>
+        [DataMember]
+        public int ConsiderationWindowHeadTailKey
+        {
+            get { return GetValue<int>("ConsiderationWindowHeadTailKey"); }
+            set { SetValue<int>("ConsiderationWindowHeadTailKey", value); }
+        }
+        
+        /// <summary>
+        /// 検討ウインドウでのキー操作その3
+        ///
+        /// 選択行のミニ盤面へのPVの転送
+        /// 0 : なし
+        /// 1 : Enter : デフォルト
+        /// 2 : Space
+        /// </summary>
+        [DataMember]
+        public int ConsiderationPvSendKey
+        {
+            get { return GetValue<int>("ConsiderationPvSendKey"); }
+            set { SetValue<int>("ConsiderationPvSendKey", value); }
+        }
+
+        /// <summary>
+        /// ミニ盤面のキー操作その1
+        ///
+        /// 選択行の上下移動
+        /// 0 : なし
+        /// 1 : Ctrl←→  : デフォルト
+        /// 2 : Ctrl↑↓
+        /// 3 : ←と→
+        /// 4 : ↑と↓ 
+        /// 5 : ，(カンマ)と ．(ピリオド)
+        /// 6 : PageUpとPageDown
+        /// </summary>
+        [DataMember]
+        public int MiniBoardPrevNextKey
+        {
+            get { return GetValue<int>("MiniBoardPrevNextKey"); }
+            set { SetValue<int>("MiniBoardPrevNextKey", value); }
+        }
+
+        /// <summary>
+        /// ミニ盤面のキー操作その2
+        ///
+        /// 選択行の上下移動
+        /// 0 : なし
+        /// 1 : Ctrl←→
+        /// 2 : Ctrl↑↓ : デフォルト 
+        /// 3 : ←と→
+        /// 4 : ↑と↓ 
+        /// 5 : ，(カンマ)と ．(ピリオド)
+        /// 6 : PageUpとPageDown
+        /// </summary>
+        [DataMember]
+        public int MiniBoardHeadTailKey
+        {
+            get { return GetValue<int>("MiniBoardHeadTailKey"); }
+            set { SetValue<int>("MiniBoardHeadTailKey", value); }
+        }
 
         #endregion
 
@@ -828,16 +913,6 @@ namespace MyShogi.App
         [DataMember]
         public Point? DesktopLocation { get; set; }
 
-
-        [DataMember]
-        public DockManager EngineConsiderationWindowDockManager = new DockManager();
-
-        /// <summary>
-        /// 棋譜ウインドウはフローティングモードであるのかなどを管理する構造体。
-        /// </summary>
-        [DataMember]
-        public DockManager KifuWindowDockManager = new DockManager();
-
         /// <summary>
         /// 棋譜ウィンドウの各Columnの幅 将来的な拡張を考慮して6個用意しとく
         /// </summary>
@@ -850,6 +925,26 @@ namespace MyShogi.App
         [DataMember]
         public NotifyCollection<int> ConsiderationColumnWidth { get; set; } = new NotifyCollection<int>(6);
 
+        // -- DockWindow
+
+        /// <summary>
+        /// 棋譜ウインドウはフローティングモードであるのかなどを管理する構造体。
+        /// </summary>
+        [DataMember]
+        public DockManager KifuWindowDockManager = new DockManager();
+
+        /// <summary>
+        /// 検討ウインドウをフローティングモードであるのかなどを管理する構造体。
+        /// </summary>
+        [DataMember]
+        public DockManager EngineConsiderationWindowDockManager = new DockManager();
+
+        /// <summary>
+        /// ミニ盤面をフローティングモードであるのかなどを管理する構造体。
+        /// </summary>
+        [DataMember]
+        public DockManager MiniShogiBoardDockManager = new DockManager();
+
         #endregion
 
         #region Consideration Setting
@@ -860,6 +955,32 @@ namespace MyShogi.App
         /// </summary>
         [DataMember]
         public int ConsiderationMultiPV { get; set; }
+
+        #endregion
+
+        #region エンジン補助設定
+
+        /// <summary>
+        /// "usi"に対する"usiok"までのtime out時間。(デフォルト15秒)
+        /// 0 が設定されていれば無制限。
+        /// </summary>
+        [DataMember]
+        public int UsiOkTimeOut
+        {
+            get { return GetValue<int>("UsiOkTimeOut"); }
+            set { SetValue<int>("UsiOkTimeOut", value); }
+        }
+
+        /// <summary>
+        /// "isready"に対する"readyok"までのtime out時間。(デフォルト30秒)
+        /// 0 が設定されていれば無制限。
+        /// </summary>
+        [DataMember]
+        public int ReadyOkTimeOut
+        {
+            get { return GetValue<int>("ReadyOkTimeOut"); }
+            set { SetValue<int>("ReadyOkTimeOut", value); }
+        }
 
         #endregion
 

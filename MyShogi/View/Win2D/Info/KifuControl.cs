@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using MyShogi.App;
 using MyShogi.Model.Common.ObjectModel;
@@ -280,7 +281,7 @@ namespace MyShogi.View.Win2D
         /// ListViewのindexの行が画面に表示されるようにする。
         /// </summary>
         /// <param name="index"></param>
-        private void EnsureVisible(int index)
+        private async void EnsureVisible(int index)
         {
             // Mono(Mac/Linux)は、EnsureVisibleで落ちるらしい。絶対Mono側の原因
             // →　Visible == falseのときにスクローバーの高さの計算を間違えるようだ。
@@ -288,6 +289,7 @@ namespace MyShogi.View.Win2D
             if (!Visible)
                 return;
 
+            await Task.Delay(1);
             // 範囲チェックを行う。
             if (0 <= index && index < listView1.Items.Count)
                 listView1.EnsureVisible(index);

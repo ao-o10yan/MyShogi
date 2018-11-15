@@ -181,32 +181,10 @@ namespace MyShogi.Model.Shogi.LocalServer
                 }
             }
 
-            // 局面の設定
+            // 局面の初期化
+
             kifuManager.EnableKifuList = true;
-            if (gameSetting.BoardSetting.BoardTypeCurrent)
-            {
-                // 現在の局面からなので、いま以降の局面を削除する。
-                // ただし、いまの局面と棋譜ウィンドウとが同期しているとは限らない。
-                // まず現在局面以降の棋譜を削除しなくてはならない。
-
-                // 元nodeが、special moveであるなら、それを削除しておく。
-                if (kifuManager.Tree.IsSpecialNode())
-                    kifuManager.Tree.UndoMove();
-
-                kifuManager.Tree.ClearForward();
-
-                // 分岐棋譜かも知れないので、現在のものを本譜の手順にする。
-                kifuManager.Tree.MakeCurrentNodeMainBranch(); // View側の都合により選択行が移動してしまう可能性がある。
-
-                // 連続対局が設定されているなら、現在の局面を棋譜文字列として保存しておく。
-                if (continuousGame.IsContinuousGameSet())
-                    continuousGame.Kif = kifuManager.ToString(KifuFileType.KIF);
-            }
-            else // if (gameSetting.Board.BoardTypeEnable)
-            {
-                kifuManager.Init();
-                kifuManager.InitBoard(gameSetting.BoardSetting.BoardType);
-            }
+            InitBoard(gameSetting.BoardSetting, false);
 
             // 本譜の手順に変更したので現在局面と棋譜ウィンドウのカーソルとを同期させておく。
             UpdateKifuSelectedIndex(int.MaxValue /* 末尾に移動 */);
@@ -307,18 +285,10 @@ namespace MyShogi.Model.Shogi.LocalServer
                 engine_player.SendIsReady();
             }
 
-            // 局面の設定
+            // 局面の初期化
+
             kifuManager.EnableKifuList = true;
-            if (gameSetting.BoardSetting.BoardTypeCurrent)
-            {
-                // 「現在の局面」からのリスタート。KIF形式の文字列経由で復元する。
-                kifuManager.FromString(continuousGame.Kif);
-            }
-            else // if (gameSetting.Board.BoardTypeEnable)
-            {
-                kifuManager.Init();
-                kifuManager.InitBoard(gameSetting.BoardSetting.BoardType);
-            }
+            InitBoard(gameSetting.BoardSetting , true);
 
             // 本譜の手順に変更したので現在局面と棋譜ウィンドウのカーソルとを同期させておく。
             UpdateKifuSelectedIndex(int.MaxValue);
@@ -345,6 +315,61 @@ namespace MyShogi.Model.Shogi.LocalServer
             continuousGame.Swapped ^= true;
 
             GameSetting.SwapPlayer();
+        }
+
+        /// <summary>
+        /// 盤面を初期化する
+        /// </summary>
+        /// <param name="board"></param>
+        /// <param name="restart">GameRestart()時か？</param>
+        private void InitBoard(BoardSetting board , bool restart)
+        {
+
+            if (board.BoardTypeCurrent)
+            {
+                // 現在の局面から
+
+                if (restart)
+                {
+                    // 「現在の局面」からのリスタート。KIF形式の文字列経由で復元する。
+                    kifuManager.FromString(continuousGame.Kif);
+
+                } else {
+
+                    // 現在の局面からなので、いま以降の局面を削除する。
+                    // ただし、いまの局面と棋譜ウィンドウとが同期しているとは限らない。
+                    // まず現在局面以降の棋譜を削除しなくてはならない。
+
+                    // 元nodeが、special moveであるなら、それを削除しておく。
+                    if (kifuManager.Tree.IsSpecialNode())
+                        kifuManager.Tree.UndoMove();
+
+                    kifuManager.Tree.ClearForward();
+
+                    // 分岐棋譜かも知れないので、現在のものを本譜の手順にする。
+                    kifuManager.Tree.MakeCurrentNodeMainBranch(); // View側の都合により選択行が移動してしまう可能性がある。
+
+                    // 連続対局が設定されているなら、現在の局面を棋譜文字列として保存しておく。
+                    if (continuousGame.IsContinuousGameSet())
+                        continuousGame.Kif = kifuManager.ToString(KifuFileType.KIF);
+                }
+            }
+            else if (board.BoardTypeEnable)
+            {
+                // 典型的な初期局面が指定されている
+                kifuManager.Init();
+                kifuManager.InitBoard(board.BoardType);
+            }
+            else if (board.BoardTypeShogi960)
+            {
+                // Shogi960のルールにて開始
+                kifuManager.Init();
+                kifuManager.Tree.SetRootSfen(ExtendedGame.Shogi960());
+            }
+            else
+            {
+                Debug.Assert(false);
+            }
         }
 
         /// <summary>
@@ -596,13 +621,25 @@ namespace MyShogi.Model.Shogi.LocalServer
                         {
                             var report = args.value as UsiThinkReport;
 
-                            // このクラスのpropertyのsetterを呼び出してメッセージを移譲してやる。
-                            ThinkReport = new UsiThinkReportMessage()
+                            if (report != null)
                             {
-                                type = UsiEngineReportMessageType.UsiThinkReport,
-                                number = num_, // is captrued
-                                data = report,
-                            };
+                                // このクラスのpropertyのsetterを呼び出してメッセージを移譲してやる。
+                                ThinkReport = new UsiThinkReportMessage()
+                                {
+                                    type = UsiEngineReportMessageType.UsiThinkReport,
+                                    number = num_, // is captrued
+                                    data = report,
+                                };
+                            } else if (args.value is UsiEngineReportMessageType)
+                            {
+                                // これ、このまま投げとく。
+                                ThinkReport = new UsiThinkReportMessage()
+                                {
+                                    type = (UsiEngineReportMessageType)args.value,
+                                    number = num_, // is captrued
+                                    data = null,
+                                };
+                            }
                         }
                     });
 
@@ -657,6 +694,10 @@ namespace MyShogi.Model.Shogi.LocalServer
         /// </summary>
         private void CheckPlayerMove()
         {
+            // エンジンの初期化が終わっていないと前のbestMoveなどが残ったままなので処理するとまずいことになる。
+            if (Initializing)
+                return;
+
             // 現状の局面の手番側
             var stm = Position.sideToMove;
             var stmPlayer = Player(stm);
@@ -800,7 +841,9 @@ namespace MyShogi.Model.Shogi.LocalServer
 
         ILLEGAL_MOVE:
 
-            // これ、棋譜に記録すべき
+            // TODO : これ、棋譜に記録すべき
+            //Console.WriteLine(bestMove.Pretty());
+
             Move m = Move.ILLEGAL_MOVE;
             kifuManager.Tree.AddNode(m, PlayTimers.GetKifuMoveTimes());
             kifuManager.Tree.AddNodeComment(m, stmPlayer.BestMove.ToUsi() /* String あとでなおす*/ /* 元のテキスト */);
@@ -815,6 +858,7 @@ namespace MyShogi.Model.Shogi.LocalServer
         /// </summary>
         private void NotifyTurnChanged()
         {
+            var config = TheApp.app.Config;
             var stm = Position.sideToMove;
 
             // 検討モードでは、先手側のプレイヤーがエンジンに紐づけられている。
@@ -868,8 +912,8 @@ namespace MyShogi.Model.Shogi.LocalServer
             // 通常対局モードのはずなので現在の持ち時間設定を渡してやる。
             // エンジン検討モードなら検討エンジン設定に従う
 
-            UsiThinkLimit limit = UsiThinkLimit.TimeLimitLess;
-
+            UsiThinkLimit limit;
+            
             switch(GameMode)
             {
                 case GameModeEnum.InTheGame:
@@ -877,23 +921,15 @@ namespace MyShogi.Model.Shogi.LocalServer
                     break;
 
                 case GameModeEnum.ConsiderationWithEngine:
-                    {
-                        var setting = TheApp.app.Config.ConsiderationEngineSetting;
-                        if (setting.Limitless)
-                            limit = UsiThinkLimit.TimeLimitLess;
-                        else // if (setting.TimeLimit)
-                            limit = UsiThinkLimit.FromSecond(setting.Second);
-                    }
+                    limit = UsiThinkLimit.FromConsiderationEngineSetting(config.ConsiderationEngineSetting);
                     break;
 
                 case GameModeEnum.ConsiderationWithMateEngine:
-                    {
-                        var setting = TheApp.app.Config.MateEngineSetting;
-                        if (setting.Limitless)
-                            limit = UsiThinkLimit.TimeLimitLess;
-                        else // if (setting.TimeLimit)
-                            limit = UsiThinkLimit.FromSecond(setting.Second);
-                    }
+                    limit = UsiThinkLimit.FromConsiderationEngineSetting(config.MateEngineSetting);
+                    break;
+
+                default: // ここに来ることはないはずだが？
+                    limit = UsiThinkLimit.TimeLimitLess;
                     break;
             }
 
@@ -948,7 +984,7 @@ namespace MyShogi.Model.Shogi.LocalServer
             // 双方の残り時間表示の更新
             UpdateTimeString();
 
-            // 時間切れ判定(対局中かつ手番側のみ)
+            // 時間切れ判定(対局中かつ手番側のみ) エンジン初期化中は、時間切れにはしない。
             CheckTimeUp();
 
             // 秒の読み上げ処理

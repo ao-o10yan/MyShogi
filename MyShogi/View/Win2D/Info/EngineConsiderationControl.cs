@@ -118,6 +118,7 @@ namespace MyShogi.View.Win2D
                     position.SetSfen(value);
                 ClearItems();
                 ClearHeader(); // HASH使用率なども初期化されるべき
+                DisplayThinkStart(); // 思考がこのタイミングで開始されているはずなのでそれを視覚的に表現する。
             }
         }
 
@@ -159,6 +160,29 @@ namespace MyShogi.View.Win2D
         {
             listView1.Items.Clear();
             list_item_moves.Clear();
+        }
+
+        /// <summary>
+        /// 思考が開始されているはずなのでそれを視覚的に表現する。
+        /// </summary>
+        public void DisplayThinkStart()
+        {
+            // エンジン名のところの背景色を変更しておく。
+
+            // readonlyのTextBoxを変更するためのhack
+            // cf. How do you change the text color of a readonly TextBox? : https://stackoverflow.com/questions/20688408/how-do-you-change-the-text-color-of-a-readonly-textbox
+            textBox1.BackColor = SystemColors.Control;
+            textBox1.ForeColor = System.Drawing.Color.OrangeRed;
+        }
+
+        /// <summary>
+        /// 思考が終了したはずなのでそれを視覚的に表現する。
+        /// </summary>
+        public void DisplayThinkEnd()
+        {
+            // エンジン名のところの背景色を元に戻す。
+            textBox1.BackColor = SystemColors.Control;
+            textBox1.ForeColor = SystemColors.WindowText;
         }
 
         /// <summary>
@@ -389,6 +413,45 @@ namespace MyShogi.View.Win2D
         }
 
         /// <summary>
+        /// 検討時に選択行を先頭に移動する。
+        /// キーハンドラから呼び出される。
+        /// </summary>
+        public void PerformHead()
+        {
+            SelectListViewItem(0);
+        }
+
+        /// <summary>
+        /// 検討時に選択行を末尾に移動する。
+        /// キーハンドラから呼び出される。
+        /// </summary>
+        public void PerformTail()
+        {
+            SelectListViewItem(listView1.Items.Count-1);
+        }
+
+        /// <summary>
+        /// 現在の選択行をMiniShogiBoardに送る。
+        /// </summary>
+        /// <returns></returns>
+        public void SendCurrentPvToMiniBoard()
+        {
+            // この現在選択されているところにある読み筋の指し手を復元して、イベントハンドラに移譲する。
+            var selected = listView1.SelectedIndices;
+            if (selected.Count == 0)
+                return;// 選択されていない…
+
+            // multi selectではないので1つしか選択されていないはず…。
+            int index = selected[0]; // first
+            if (index < list_item_moves.Count && list_item_moves[index] != null /* info stringなどだとnullがありうる。*/)
+                ViewModel.RaisePropertyChanged("PvClicked", new MiniShogiBoardData()
+                {
+                    rootSfen = root_sfen,
+                    moves = list_item_moves[index]
+                });
+        }
+
+        /// <summary>
         /// ListViewのindex番目の項目を選択する。(選択行にする)
         ///
         /// その項目がなければ選択行にしない。
@@ -421,19 +484,7 @@ namespace MyShogi.View.Win2D
 
         private void listView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            // この現在選択されているところにある読み筋の指し手を復元して、イベントハンドラに移譲する。
-            var selected = listView1.SelectedIndices;
-            if (selected.Count == 0)
-                return;// 選択されていない…
-
-            // multi selectではないので1つしか選択されていないはず…。
-            int index = selected[0]; // first
-            if (index < list_item_moves.Count && list_item_moves[index]!=null /* info stringなどだとnullがありうる。*/)
-                ViewModel.RaisePropertyChanged("PvClicked", new MiniShogiBoardData()
-                {
-                    rootSfen = root_sfen,
-                    moves = list_item_moves[index]
-                });
+            SendCurrentPvToMiniBoard();
         }
 
         private void EngineConsiderationControl_Resize(object sender, System.EventArgs e)
@@ -467,7 +518,7 @@ namespace MyShogi.View.Win2D
         private void listView1_ColumnWidthChanged(object sender, ColumnWidthChangedEventArgs e)
         {
             var index = e.ColumnIndex;
-            if (index < 0 || 5 < index)
+            if (!(0 <= index && index <= 5))
                 return; // 範囲外？
 
             // この設定、Globalに紐づけておく。
@@ -536,7 +587,7 @@ namespace MyShogi.View.Win2D
             //listView1.AutoResizeColumns( ColumnHeaderAutoResizeStyle.ColumnContent);
             // headerとcontentの文字長さを考慮して、横幅が自動調整されて水平スクロールバーで移動してくれるといいのだが、うまくいかない。よくわからない。
 
-            foreach(var index in All.Int(5))
+            foreach(var index in All.Int(6))
             {
                 int w1 = listView1.Columns[index].Width;
                 int w2 = TheApp.app.Config.ConsiderationColumnWidth[index];

@@ -126,6 +126,7 @@
             this.listView1.OwnerDraw = true;
             this.listView1.Size = new System.Drawing.Size(268, 97);
             this.listView1.TabIndex = 4;
+            this.listView1.TabStop = false;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.ColumnWidthChanged += new System.Windows.Forms.ColumnWidthChangedEventHandler(this.listView1_ColumnWidthChanged);
             this.listView1.ClientSizeChanged += new System.EventHandler(this.listView1_ClientSizeChanged);
@@ -141,6 +142,7 @@
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
+            this.DoubleBuffered = true;
             this.Margin = new System.Windows.Forms.Padding(1, 2, 1, 2);
             this.Name = "KifuControl";
             this.Size = new System.Drawing.Size(299, 141);

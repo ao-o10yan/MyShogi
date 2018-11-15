@@ -150,14 +150,18 @@ namespace MyShogi.App
             Config.AddPropertyChangedHandler("NegateEvalWhenWhite", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("KifuWindowKifuVersion", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("ConsiderationWindowKifuVersion", mainDialog.ForceRedraw);
-            Config.AddPropertyChangedHandler("KifuWindowWidthType", mainDialog.ForceRedraw);
-            Config.AddPropertyChangedHandler("ConsiderationWindowHeightType", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("DisplayNameTurnVersion", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("EnableGameEffect", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("PickedMoveDisplayStyle", mainDialog.ForceRedraw);
 
+            // 棋譜・検討ウインドウの高さ・幅
+
+            Config.AddPropertyChangedHandler("KifuWindowWidthType", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("KifuWindowWidthType", mainDialog.ResizeKifuControl, mainDialog);
+            Config.AddPropertyChangedHandler("KifuWindowWidthType", mainDialog.UpdateMenuItems, mainDialog);
+            Config.AddPropertyChangedHandler("ConsiderationWindowHeightType", mainDialog.ForceRedraw);
             Config.AddPropertyChangedHandler("ConsiderationWindowHeightType", mainDialog.ResizeConsiderationControl, mainDialog);
+            Config.AddPropertyChangedHandler("ConsiderationWindowHeightType", mainDialog.UpdateMenuItems , mainDialog);
 
             // 操作設定
 
@@ -166,11 +170,12 @@ namespace MyShogi.App
             Config.AddPropertyChangedHandler("KifuWindowFirstLastKey", mainDialog.UpdateToolStripShortcut);
             Config.AddPropertyChangedHandler("ConsiderationWindowPrevNextKey", mainDialog.UpdateToolStripShortcut);
             
-            // Window
+            // DockWindow
 
             Config.KifuWindowDockManager.AddPropertyChangedHandler("DockState", mainDialog.UpdateMenuItems, mainDialog);
             Config.EngineConsiderationWindowDockManager.AddPropertyChangedHandler("DockState", mainDialog.UpdateMenuItems, mainDialog);
-            
+            Config.MiniShogiBoardDockManager.AddPropertyChangedHandler("DockState", mainDialog.UpdateMenuItems, mainDialog);
+
             // -- ロギング用のハンドラをセット
 
             // メモリ上でのロギング
