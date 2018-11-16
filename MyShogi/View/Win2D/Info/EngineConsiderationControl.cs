@@ -13,6 +13,8 @@ using MyShogi.Model.Shogi.Usi;
 using MyShogi.Model.Common.Utility;
 using MyShogi.Model.Common.ObjectModel;
 using MyShogi.Model.Common.Collections;
+using MyShogi.Model.Dependency;
+using MyShogi.Model.Shogi.Kifu;
 
 namespace MyShogi.View.Win2D
 {
@@ -67,6 +69,26 @@ namespace MyShogi.View.Win2D
             {
                 get { return GetValue<MiniShogiBoardData>("PvClicked"); }
                 set { SetValue<MiniShogiBoardData>("PvClicked", value); }
+            }
+
+            /// <summary>
+            /// 右クリックメニュー「メイン棋譜にこの読み筋を分岐棋譜として送る(&S)」
+            /// がクリックされた時に発生するイベント。
+            /// </summary>
+            public MiniShogiBoardData SendToMainKifu
+            {
+                get { return GetValue<MiniShogiBoardData>("SendToMainKifu"); }
+                set { SetValue<MiniShogiBoardData>("SendToMainKifu", value); }
+            }
+
+            /// <summary>
+            /// 右クリックメニュー「メイン棋譜をこの読み筋で置き換える(&R)」
+            /// がクリックされた時に発生するイベント。
+            /// </summary>
+            public MiniShogiBoardData RepalceMainKifu
+            {
+                get { return GetValue<MiniShogiBoardData>("RepalceMainKifu"); }
+                set { SetValue<MiniShogiBoardData>("RepalceMainKifu", value); }
             }
 
 #if false
@@ -808,6 +830,8 @@ namespace MyShogi.View.Win2D
             UpdatePvWidth();
         }
 
+        #region context menu
+
         /// <summary>
         /// 検討ウインドウでの右クリックメニュー
         /// </summary>
@@ -816,8 +840,6 @@ namespace MyShogi.View.Win2D
         private void listView1_MouseDown(object sender, MouseEventArgs e)
         {
 
-            // 作りかけ。
-#if false
             var early_exit = true;
             ListViewItem targetItem = null;
 
@@ -835,9 +857,9 @@ namespace MyShogi.View.Win2D
 
                 // これが読み筋のある有効なItemであるかを確認しないといけないが…。
                 // まあ、読み筋が書いてあればとりまOk(あとでよく考える)
-                // TODO : 元の読み筋をちゃんと保持しておかないといけないのでは…。
-                var pv = targetItem.SubItems[6].Text;
-                if (pv.Empty())
+
+                var pv_text = targetItem.SubItems[6].Text;
+                if (pv_text.Empty())
                     return;
 
                 // 抜けないことが確定した
@@ -845,26 +867,129 @@ namespace MyShogi.View.Win2D
             } finally
             {
                 // なんか変なところをクリックしたので右クリックメニューを隠す
-                if (early_exit && contextMenuStrip1.Visible)
-                {
-                    selectedListViewItem = null;
-                    contextMenuStrip1.Hide();
-                }
+                if (early_exit)
+                    ResetContextMenu();
             }
 
             // コンテキストメニューを表示する。
             contextMenuStrip1.Show(Cursor.Position);
+
             // このコンテキストメニューはどのItemに対して出しているのかを記録しておく。
             selectedListViewItem = targetItem;
-#endif
+
+            // -- この瞬間のアイテムを保存しておく
+            // (右クリックメニューが選ばれるときには異なる内容になっている可能性があるので)
+
+            // ここの文字列そのまま取得
+            pvTextOnClick = selectedListViewItem.SubItems[6].Text;
+
+            // ここの文字列そのまま取得
+            var index = selectedListViewItem.Index;
+            if (!(0 <= index && index < list_item_moves.Count))
+                return;
+
+            if (root_sfen == null)
+                return;
+
+            boardDataOnRightClick = new MiniShogiBoardData()
+            {
+                rootSfen = root_sfen,
+                moves = list_item_moves[index]
+            };
         }
 
-#if false
+        /// <summary>
+        /// 出していたContextMenuを隠す。(変なところをクリックしたときなど)
+        /// </summary>
+        private void ResetContextMenu()
+        {
+            if (contextMenuStrip1.Visible)
+            {
+                contextMenuStrip1.Hide();
+            }
+
+            // 前の参照が残っているのは気持ち悪いので消してやる。
+            selectedListViewItem = null;
+            boardDataOnRightClick = null;
+            pvTextOnClick = null;
+        }
+
         /// <summary>
         /// 検討ウインドウで右クリックで選択されている項目
         /// </summary>
         ListViewItem selectedListViewItem;
-#endif
+
+        /// <summary>
+        /// 右クリックされた時点でのrootSfenとmoves
+        /// </summary>
+        MiniShogiBoardData boardDataOnRightClick;
+
+        /// <summary>
+        /// 右クリックされた時点での読み筋
+        /// </summary>
+        string pvTextOnClick;
+
+        /// <summary>
+        /// 右クリックメニュー「読み筋を表示のままの文字列でクリップボードに貼り付ける(&P)」
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PastePvToClipboard_Click(object sender, EventArgs e)
+        {
+            if (pvTextOnClick == null)
+                return;
+
+            ClipboardEx.SetText(pvTextOnClick);
+
+            ResetContextMenu();
+        }
+
+        /// <summary>
+        /// 右クリックメニュー「読み筋をKIF形式でクリップボードに貼り付ける(&K)」
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PasteKifToClipboard_Click(object sender, EventArgs e)
+        {
+            // KIF形式で保存する
+
+            var kifu = KifuManager.ToStringFromRootSfenAndMoves(KifuFileType.KIF,
+                boardDataOnRightClick.rootSfen, boardDataOnRightClick.moves);
+            if (kifu == null)
+                return;
+
+            ClipboardEx.SetText(kifu);
+
+            ResetContextMenu();
+        }
+
+        /// <summary>
+        /// 右クリックメニュー「メイン棋譜にこの読み筋を分岐棋譜として送る(&S)」
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SendToMainKifu_Click(object sender, EventArgs e)
+        {
+            if (boardDataOnRightClick == null)
+                return;
+
+            ViewModel.RaisePropertyChanged("SendToMainKifu", boardDataOnRightClick);
+        }
+
+        /// <summary>
+        /// 右クリックメニュー「メイン棋譜をこの読み筋で置き換える(&R)」
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ReplaceMainKifu_Click(object sender, EventArgs e)
+        {
+            if (boardDataOnRightClick == null)
+                return;
+
+            ViewModel.RaisePropertyChanged("RepalceMainKifu", boardDataOnRightClick);
+        }
+
+        #endregion // context menu
 
     }
 }

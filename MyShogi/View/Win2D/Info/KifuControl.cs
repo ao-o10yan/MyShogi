@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using MyShogi.App;
 using MyShogi.Model.Common.ObjectModel;
@@ -281,7 +280,11 @@ namespace MyShogi.View.Win2D
         /// ListViewのindexの行が画面に表示されるようにする。
         /// </summary>
         /// <param name="index"></param>
+#if MONO
         private async void EnsureVisible(int index)
+#else
+        private void EnsureVisible(int index)
+#endif
         {
             // Mono(Mac/Linux)は、EnsureVisibleで落ちるらしい。絶対Mono側の原因
             // →　Visible == falseのときにスクローバーの高さの計算を間違えるようだ。
@@ -289,7 +292,16 @@ namespace MyShogi.View.Win2D
             if (!Visible)
                 return;
 
-            await Task.Delay(1);
+#if MONO
+            // Linux環境だと、これ入れないとハングする。
+            // cf. https://twitter.com/hnakada123/status/1062564183512776704
+            //
+            // たぶんX11のメッセージングが、Monoが想定しているのと異なるためだと思うけども…。
+            // 棋譜ウインドウをControls.Add()したあと、DoEvents()的な何かをしないといけないということだと思う。
+
+            await System.Threading.Tasks.Task.Delay(0);
+#endif
+
             // 範囲チェックを行う。
             if (0 <= index && index < listView1.Items.Count)
                 listView1.EnsureVisible(index);
