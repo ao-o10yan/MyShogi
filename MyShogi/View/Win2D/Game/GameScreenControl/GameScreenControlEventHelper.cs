@@ -1258,12 +1258,12 @@ namespace MyShogi.View.Win2D
                 MouseClientLocation = pt;
                 MouseClientLocationReverse = reverse; // この保存されたときにreverseであったかも併せて保存しておく。
 
-                if (state.state == GameScreenControlViewStateEnum.PiecePickedUp)
+                if (state.state == GameScreenControlViewStateEnum.PiecePickedUp && TheApp.app.Config.PickedMoveDisplayStyle == 1)
                 {
 
-                        // 駒をマウスカーソルに追随させるモードである
-                        // マウスカーソルが移動しているので、このとき再描画が必要になる。
-                        Dirty = true;
+                    // 駒をマウスカーソルに追随させるモードである
+                    // マウスカーソルが移動しているので、このとき再描画が必要になる。
+                    Dirty = true;
                 }
             }
         }
