@@ -355,6 +355,7 @@ namespace MyShogi.View.Win2D
                 return; // 追加されてますけど？
 
             mother.Controls.Add(miniShogiBoard1);
+            InitSpliter2Position();
         }
 
         /// <summary>
