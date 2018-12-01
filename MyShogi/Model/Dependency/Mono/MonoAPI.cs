@@ -81,54 +81,7 @@ namespace MyShogi.Model.Dependency
                 Log.Write(LogInfoType.SystemError, $"GetProcessorCores() , success = {success} , processor_cores = {processor_cores}");
                 processor_cores = 1;
             }
-#if LINUX
-			// Linuxのnprocでは論理コア数になるので、
-			// lscpuの"Thread(s) per core"で割った数を物理コア数とする。
 
-            var lscpu_info = new ProcessStartInfo
-            {
-                FileName = "lscpu",
-                Arguments = "",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardInput = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = false,
-            };
-
-            var lscpu = new Process
-            {
-                StartInfo = lscpu_info,
-            };
-
-            lscpu.Start();
-
-            var res = lscpu.StandardOutput.ReadToEnd();
-			//Console.WriteLine("res = {0}", res);
-
-			var thread_num = 0;
-            var rows = res.Split('\n');
-			for (int i = 0; i < rows.Length; i++)
-			{
-				var row = rows[i];
-
-				var data = row.Split(':');
-				if (data.Length != 2) continue;
-
-				var key = data[0].Trim();
-				var value = data[1].Trim();
-				if (key == "Thread(s) per core" || key == "コアあたりのスレッド数")
-				{
-					thread_num = int.Parse(value);
-					Console.WriteLine("thread_num = {0}", thread_num);
-				}
-			}
-			if (thread_num > 0)
-			{
-				processor_cores = processor_cores / thread_num;
-			}
-#endif
-			Console.WriteLine("processor_cores = {0}", processor_cores);
             return processor_cores;
         }
 
@@ -516,47 +469,32 @@ namespace MyShogi.Model.Resource.Sounds
                 {
                     // ファイルが存在しないときはreturnするが、このとき、
                     // 参照カウント自体は非0でかつ、_playerProcess == null
-                    if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe")))
-					{
-						playerExeName = "SoundPlayer";
-                        var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
-                        var info = new ProcessStartInfo
-	                    {
-	                        FileName = "mono",
-	                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
+                    var playerExePath = Path.Combine(Directory.GetCurrentDirectory(), "SoundPlayer.exe");
+                    if (!File.Exists(playerExePath))
+                        return;
 
-	                        CreateNoWindow = true,
-	                        UseShellExecute = false,
-	                        RedirectStandardInput = true,
-	                        RedirectStandardOutput = true,
-	                        RedirectStandardError = false,
-	                    };
-
-	                    var process = new Process
-	                    {
-	                        StartInfo = info,
-	                    };
-
-	                    process.Start();
-	                    _playerProcess = process;
-					}
-#if MACOS
-                    else if (File.Exists("/usr/bin/afplay"))
-					{
-						playerExeName = "afplay";
-					}
-#elif LINUX
-                    else if (File.Exists("/usr/bin/aplay"))
-					{
-						playerExeName = "aplay";
-					}
-#endif
-                    else
+                    var info = new ProcessStartInfo
                     {
-						return;
-					}
+                        FileName = "mono",
+                        Arguments = $"\"{playerExePath}\" \"{Directory.GetCurrentDirectory()}\"",
+
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = false,
+                    };
+
+                    var process = new Process
+                    {
+                        StartInfo = info,
+                    };
+
+                    process.Start();
+                    _playerProcess = process;
                 }
             }
+
         }
 
         /// <summary>
@@ -590,48 +528,11 @@ namespace MyShogi.Model.Resource.Sounds
         {
             lock (lockObject)
             {
-				//Console.WriteLine("playerExeName = {0}", playerExeName);
-				if (playerExeName == "SoundPlayer")
-				{
-	                if (_playerProcess == null || _playerProcess.HasExited)
-	                {
-						return;
-					}
-					play_id = play_id_count++;
-					_playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
-	            }
+                if (_playerProcess == null || _playerProcess.HasExited)
+                    return;
 
-#if MACOS
-	            if (playerExeName == "afplay")
-#elif LINUX
-                if (playerExeName == "aplay")
-#endif
-                {
-                    //Console.WriteLine("wav = {0}", filename);
-					var info = new ProcessStartInfo
-					{
-						FileName = playerExeName,
-						Arguments = filename,
-
-						CreateNoWindow = true,
-						UseShellExecute = false,
-						RedirectStandardInput = true,
-						RedirectStandardOutput = true,
-						RedirectStandardError = false,
-					};
-
-					var process = new Process
-					{
-						StartInfo = info,
-					};
-
-					process.Start();
-
-                    if (filename.Substring(filename.Length - 11, 5) != "koma_")
-                    {
-                        _playerProcess = process;
-                    }
-                }
+                play_id = play_id_count++;
+                _playerProcess.StandardInput.WriteLine($"play {play_id} {filename}");
             }
         }
 
@@ -645,26 +546,16 @@ namespace MyShogi.Model.Resource.Sounds
         /// <returns></returns>
         public bool IsPlaying()
         {
-			//Console.WriteLine("playerExeName = {0}", playerExeName);
             if (_playerProcess == null || _playerProcess.HasExited)
-			{
-				Console.WriteLine("IsPlay = false");
                 return false;
-			}
-			else if (playerExeName == "SoundPlayer")
-			{
-				_playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
-				var result = _playerProcess.StandardOutput.ReadLine();
-				if (String.IsNullOrWhiteSpace(result))
-					return false;
 
-				result = result.Trim();
-				return result == "yes";
-			}
-			else
-			{
-				return true;
-			}
+            _playerProcess.StandardInput.WriteLine($"is_playing {play_id}");
+            var result = _playerProcess.StandardOutput.ReadLine();
+            if (String.IsNullOrWhiteSpace(result))
+                return false;
+
+            result = result.Trim();
+            return result == "yes";
         }
 
         public void Dispose()
@@ -700,9 +591,6 @@ namespace MyShogi.Model.Resource.Sounds
 
         // 排他制御用
         private static object lockObject = new object();
-
-		//どのPlayerを用意してるか
-		private static string playerExeName;
     }
 }
 
