@@ -99,37 +99,41 @@ namespace MyShogi.Model.Resource.Images
                 // piece_box_exist ==  true 駒箱あり
                 foreach (var piece_box_exist in All.Bools())
                 {
-                    var img = new ImageLoader();
-                    img.CreateBitmap(1920, 1080, PixelFormat.Format24bppRgb /* Format32bppPArgb */);
-
-                    // 畳と盤を合成する。
-                    using (var g = Graphics.FromImage(img.image))
+                    foreach (var name_plate_visible in All.Bools())
                     {
-                        var rect = new Rectangle(0, 0, img.image.Width, img.image.Height);
-                        // DrawImageで等倍の転送にするためにはrectの指定が必要
-                        g.DrawImage(tatami.image, rect, rect, GraphicsUnit.Pixel);
+                        var img = new ImageLoader();
+                        img.CreateBitmap(1920, 1080, PixelFormat.Format24bppRgb /* Format32bppPArgb */);
 
-                        // Mono環境だと、転送元がalpha付きのDrawImage、うまく転送できないので
-                        // 自前のwrapper経由で行う。
+                        // 畳と盤を合成する。
+                        using (var g = Graphics.FromImage(img.image))
+                        {
+                            var rect = new Rectangle(0, 0, img.image.Width, img.image.Height);
+                            // DrawImageで等倍の転送にするためにはrectの指定が必要
+                            g.DrawImage(tatami.image, rect, rect, GraphicsUnit.Pixel);
 
-                        DrawImageHelper.DrawImage(g , img.image , board.image, rect, rect, GraphicsUnit.Pixel);
-                        DrawImageHelper.DrawImage(g , img.image , piece_table[piece_table_version].image, rect, rect, GraphicsUnit.Pixel);
+                            // Mono環境だと、転送元がalpha付きのDrawImage、うまく転送できないので
+                            // 自前のwrapper経由で行う。
 
-                        // 駒台が縦長のとき、ネームプレートは別の素材
-                        if (piece_table_version == 0)
-                            DrawImageHelper.DrawImage(g, img.image  , name_plate.image, rect, rect, GraphicsUnit.Pixel);
+                            DrawImageHelper.DrawImage(g, img.image, board.image, rect, rect, GraphicsUnit.Pixel);
+                            DrawImageHelper.DrawImage(g, img.image, piece_table[piece_table_version].image, rect, rect, GraphicsUnit.Pixel);
 
-                        // 駒箱を合成するのは盤面編集モードの時のみ
-                        if (piece_box_exist)
-                            DrawImageHelper.DrawImage(g, img.image  , piece_box[piece_table_version].image, rect, rect, GraphicsUnit.Pixel);
+                            // 駒台が縦長のとき、ネームプレートは別の素材
+                            if (piece_table_version == 0 && name_plate_visible)
+                                DrawImageHelper.DrawImage(g, img.image, name_plate.image, rect, rect, GraphicsUnit.Pixel);
+
+                            // 駒箱を合成するのは盤面編集モードの時のみ
+                            if (piece_box_exist)
+                                DrawImageHelper.DrawImage(g, img.image, piece_box[piece_table_version].image, rect, rect, GraphicsUnit.Pixel);
+                        }
+
+                        var id = piece_table_version + (piece_box_exist ? 2 : 0) + (name_plate_visible ? 0 : 4);
+
+                        // 前回に合成したものは解放しておく。
+                        if (BoardImages[id] != null)
+                            BoardImages[id].Dispose();
+                        BoardImages[id] = img;
+                        System.Console.WriteLine("id = {0}", id);
                     }
-
-                    var id = piece_table_version + (piece_box_exist ? 2 : 0);
-
-                    // 前回に合成したものは解放しておく。
-                    if (BoardImages[id] != null)
-                        BoardImages[id].Dispose();
-                    BoardImages[id] = img;
                 }
             }
 
@@ -392,7 +396,7 @@ namespace MyShogi.Model.Resource.Images
         /// 
         /// { 普通の駒台 , 小さな駒台 } × { 駒箱なし , 駒箱あり }の4通り生成して持っている。
         /// </summary>
-        private ImageLoader[] BoardImages = new ImageLoader[4];
+        private ImageLoader[] BoardImages = new ImageLoader[8];
 
         // -- 以下、それぞれの画像
 
@@ -410,11 +414,11 @@ namespace MyShogi.Model.Resource.Images
         /// </summary>
         /// <param name="piece_table_version"></param>
         /// <returns></returns>
-        public ImageLoader BoardImage(int piece_table_version , bool piece_box)
+        public ImageLoader BoardImage(int piece_table_version , bool piece_box , bool name_plate_visible)
         {
             Debug.Assert(0 <= piece_table_version && piece_table_version < 2);
 
-            return BoardImages[piece_table_version + (piece_box ? 2 : 0)];
+            return BoardImages[piece_table_version + (piece_box ? 2 : 0) + (name_plate_visible ? 0 : 4)];
         }
 
         /// <summary>
