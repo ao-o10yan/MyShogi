@@ -19,10 +19,11 @@ namespace MyShogi.Model.Resource.Images
         /// 
         /// </summary>
         /// <returns></returns>
-        public static Sprite Board(int piece_table_version , bool piece_box)
+        public static Sprite Board(int piece_table_version , bool piece_box , bool name_plate_visible)
         {
             var srcRect = new Rectangle(0, 0, board_img_width, board_img_height);
-            var image = TheApp.app.ImageManager.BoardImage(piece_table_version,piece_box).image;
+            //var image = TheApp.app.ImageManager.BoardImage(piece_table_version,piece_box).image;
+            var image = TheApp.app.ImageManager.BoardImage(piece_table_version, piece_box, name_plate_visible).image;
 
             return new Sprite(image, srcRect);
         }

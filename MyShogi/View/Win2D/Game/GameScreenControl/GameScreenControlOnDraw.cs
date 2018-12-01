@@ -58,7 +58,7 @@ namespace MyShogi.View.Win2D
                 var inTheBoardEdit = gameServer.InTheBoardEdit;
 
                 // 座標系はストレートに指定しておけばaffine変換されて適切に描画される。
-                DrawSprite(new Point(0, 0), SPRITE.Board(PieceTableVersion, inTheBoardEdit));
+                DrawSprite(new Point(0, 0), SPRITE.Board(PieceTableVersion, inTheBoardEdit, Setting.NamePlateVisible));
             }
 
             // -- 駒の描画
@@ -70,29 +70,18 @@ namespace MyShogi.View.Win2D
                     // 移動元の升に適用されるエフェクトを描画する。
                     DrawSprite(dest, SPRITE.PieceMove(PieceMoveEffect.PickedFrom));
 
-                    if (TheApp.app.Config.EnableMouseDrag == 0)
+                    switch (config.PickedMoveDisplayStyle)
                     {
-                        switch (config.PickedMoveDisplayStyle)
+                        case 0:
+                            // 少し持ち上げた感じで描画する。
+                            picked_sprite = new SpriteEx(sprite, dest + new Size(-5, -20));
+                            break;
 
-                        {
-                            case 0:
-                                // 少し持ち上げた感じで描画する。
-                                picked_sprite = new SpriteEx(sprite, dest + new Size(-5, -20));
-                                break;
-
-                            case 1:
-                                // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
-                                picked_sprite = new SpriteEx(sprite, MouseClientLocation
-                                    + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
-                        picked_sprite = new SpriteEx(sprite, MouseClientLocation
-                            + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
-
+                        case 1:
+                            // マウスカーソルに追随させるモードであるから、マウスカーソルの位置に..
+                            picked_sprite = new SpriteEx(sprite, MouseClientLocation
+                                + new Size(-piece_img_size.Width / 2, -piece_img_size.Height / 2));
+                            break;
                     }
                 });
 

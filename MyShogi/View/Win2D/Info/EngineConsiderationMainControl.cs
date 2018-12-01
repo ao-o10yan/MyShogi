@@ -490,31 +490,31 @@ namespace MyShogi.View.Win2D
         /// </summary>
         private void InitSpliter2Position()
         {
-			if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
-			{
-				// 親Form側が最小化されたりすると、Resizeイベントが発生して、そのときClientSize == (0,0)だったりする。
-				if (ClientSize.IsEmpty)
-					return;
+            if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
+            {
+                // 親Form側が最小化されたりすると、Resizeイベントが発生して、そのときClientSize == (0,0)だったりする。
+                if (ClientSize.IsEmpty)
+                    return;
 
-				var board_height = Math.Max(ClientSize.Height /* - toolStrip1.Height */ , 1);
-				// →　toolStrip1をMiniShogiBoardに移動させた。
+                var board_height = Math.Max(ClientSize.Height /* - toolStrip1.Height */ , 1);
+                // →　toolStrip1をMiniShogiBoardに移動させた。
 
-				// 継ぎ盤があるなら、その領域は最大でも横幅の1/4まで。
-				var board_width = Math.Max((int)(board_height * aspect_ratio), 1);
-				var max_board_width = Math.Max(ClientSize.Width * 1 / 4, 1);
+                // 継ぎ盤があるなら、その領域は最大でも横幅の1/4まで。
+                var board_width = Math.Max((int)(board_height * aspect_ratio), 1);
+                var max_board_width = Math.Max(ClientSize.Width * 1 / 4, 1);
 
-				if (board_width > max_board_width)
-				{
-					board_width = max_board_width;
-					// 制限した結果、画面に収まらなくなっている可能性がある。
-					board_height = Math.Max((int)(board_width / aspect_ratio), 1);
-				}
+                if (board_width > max_board_width)
+                {
+                    board_width = max_board_width;
+                    // 制限した結果、画面に収まらなくなっている可能性がある。
+                    board_height = Math.Max((int)(board_width / aspect_ratio), 1);
+                }
 
-				int dist = ClientSize.Width - splitContainer2.SplitterWidth - board_width;
-				splitContainer2.SplitterDistance = Math.Max(dist, 1);
+                int dist = ClientSize.Width - splitContainer2.SplitterWidth - board_width;
+                splitContainer2.SplitterDistance = Math.Max(dist, 1);
 
-				DockMiniBoard(board_width, board_height);
-			}
+                DockMiniBoard(board_width, board_height);
+            }
         }
 
         /// <summary>
@@ -523,27 +523,27 @@ namespace MyShogi.View.Win2D
         /// </summary>
         private void UpdateBoardHeight(bool splitterAdjest)
         {
-			if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
-			{
-				var board_width = Math.Max(ClientSize.Width - splitContainer2.SplitterWidth - splitContainer2.SplitterDistance, 1);
-				var max_board_height = Math.Max(ClientSize.Height /*- toolStrip1.Height */, 1);
-				var board_height = Math.Max((int)(board_width / aspect_ratio), 1);
+            if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
+            {
+                var board_width = Math.Max(ClientSize.Width - splitContainer2.SplitterWidth - splitContainer2.SplitterDistance, 1);
+                var max_board_height = Math.Max(ClientSize.Height /*- toolStrip1.Height */, 1);
+                var board_height = Math.Max((int)(board_width / aspect_ratio), 1);
 
-				if (board_height > max_board_height)
-				{
-					board_height = max_board_height;
-					board_width = Math.Max((int)(board_height * aspect_ratio), 1);
+                if (board_height > max_board_height)
+                {
+                    board_height = max_board_height;
+                    board_width = Math.Max((int)(board_height * aspect_ratio), 1);
 
-					if (splitterAdjest)
-					{
-						// 横幅減ったはず。spliterの右側、無駄であるから、詰める。
-						int dist = ClientSize.Width - splitContainer2.SplitterWidth - board_width;
-						splitContainer2.SplitterDistance = Math.Max(dist, 1);
-					}
-				}
+                    if (splitterAdjest)
+                    {
+                        // 横幅減ったはず。spliterの右側、無駄であるから、詰める。
+                        int dist = ClientSize.Width - splitContainer2.SplitterWidth - board_width;
+                        splitContainer2.SplitterDistance = Math.Max(dist, 1);
+                    }
+                }
 
-				DockMiniBoard(board_width, board_height);
-			}
+                DockMiniBoard(board_width, board_height);
+            }
         }
 
         /// <summary>
@@ -551,13 +551,13 @@ namespace MyShogi.View.Win2D
         /// </summary>
         private void DockMiniBoard(int board_width, int board_height)
         {
-			//if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
-			//{
-				// miniShogiBoardをToolStripのすぐ上に配置する。
-				int y = ClientSize.Height - board_height /* - toolStrip1.Height*/;
-				miniShogiBoard1.Size = new Size(board_width, board_height);
-				miniShogiBoard1.Location = new Point(0, y);
-			//}
+            //if (TheApp.app.Config.MiniShogiBoardDockManager.DockState == MyShogi.Model.Common.Tool.DockState.InTheMainWindow)
+            //{
+                // miniShogiBoardをToolStripのすぐ上に配置する。
+                int y = ClientSize.Height - board_height /* - toolStrip1.Height*/;
+                miniShogiBoard1.Size = new Size(board_width, board_height);
+                miniShogiBoard1.Location = new Point(0, y);
+            //}
         }
 
         /// <summary>
