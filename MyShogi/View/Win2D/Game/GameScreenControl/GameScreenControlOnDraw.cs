@@ -58,7 +58,7 @@ namespace MyShogi.View.Win2D
                 var inTheBoardEdit = gameServer.InTheBoardEdit;
 
                 // 座標系はストレートに指定しておけばaffine変換されて適切に描画される。
-                DrawSprite(new Point(0, 0), SPRITE.Board(PieceTableVersion, inTheBoardEdit));
+                DrawSprite(new Point(0, 0), SPRITE.Board(PieceTableVersion, inTheBoardEdit, Setting.NamePlateVisible));
             }
 
             // -- 駒の描画
