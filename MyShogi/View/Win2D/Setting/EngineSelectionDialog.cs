@@ -192,8 +192,8 @@ namespace MyShogi.View.Win2D
             SelectionControlTopIndex += 5;
 
             // 押せないようにしといたはずなんだけど(´ω｀)
-            if (SelectionControlTopIndex > SelectionControls.Length)
-                SelectionControlTopIndex -= 5;
+            //if (SelectionControlTopIndex > SelectionControls.Length)
+            //    SelectionControlTopIndex -= 5;
 
             UpdateSelectionControls();
         }
